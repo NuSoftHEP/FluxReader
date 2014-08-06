@@ -17,19 +17,35 @@ int load_flxrd()
     return -2;
   }
 
-  /*const char* srt_priv_path = gSystem->ExpandPathName("$(SRT_PRIVATE_CONTEXT)");
-  if(!srt_priv_path) {
-    std::cout << "DK2NU needs to be setup." << std::endl;
+  const char* fluxreader_priv_path = gSystem->ExpandPathName("$(FLUXREADER_PRIV)");
+  if(!fluxreader_priv_path) {
+    std::cout << "FluxReader needs to be setup." << std::endl;
     return -3;
-  }*/
+  }
 
-  /*const char* srt_pub_path = gSystem->ExpandPathName("$(SRT_PRIVATE_CONTEXT)");
-  if(!srt_pub_path) {
-    std::cout << "SRT_PUBLIC_CONTEXT needs to be setup." << std::endl;
+  /*const char* fluxreader_pub_path = gSystem->ExpandPathName("$(FLUXREADER_PUB)");
+  if(!fluxreader_pub_path) {
+    std::cout << "FluxReader needs to be setup." << std::endl;
     return -4;
   }*/
 
+  // Get the path to the load_dk2nu.C script within the Dk2Nu package
+  TString load_dk2nu_path = dk2nu_path;
+  load_dk2nu_path += "/scripts";
+  load_dk2nu_path += "/load_dk2nu.C";
+
+  // Create a command that can be run
+  TString load_dk2nu_command = ".L " + load_dk2nu_path;
+
+  // Process load_dk2nu.C and quit if there is an error
+  if(gROOT->ProcessLine(load_dk2nu_command) != 0) {
+    std::cout << "Error occurred in running " << load_dk2nu_path << "." << std::endl;
+    return -5;
+  }
+
   TString include_path = gSystem->GetIncludePath(); // Get the current list of include paths
+
+  // Add on all of the other necessary include directory locations
 
   include_path += " -I";
   include_path += root_path;
@@ -40,20 +56,12 @@ int load_flxrd()
   include_path += "/tree";
 
   include_path += " -I";
-  include_path += "/nova/app/users/gkafka/test_svn_development/FluxReader";
+  include_path += fluxreader_priv_path;
   include_path += "/include";
 
-  // Only add a path to the SRT_PRIVATE_CONTEXT if it is setup
-  /*if(srt_priv_path) {
-    include_path += " -I";
-    include_path += srt_priv_path;
-    include_path += "/include";
-  }*/
-
-  // Add SRT_PUBLIC_CONTEXT path
-  // Note that this MUST come AFTER SRT_PRIVATE_CONTEXT
+  // Note that this MUST come AFTER the private path!
   /*include_path += " -I";
-  include_path += srt_pub_path;
+  include_path += fluxreader_pub_path;
   include_path += "/include";*/
 
   gSystem->SetIncludePath(include_path); // Set the include path as the new, appended list of include paths
