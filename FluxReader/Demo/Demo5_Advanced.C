@@ -56,17 +56,21 @@ void Demo5_Advanced()
                            1); // uses */
   // p.AddDetector(knova_nd_shift);
 
+  string dk2nu_loc = "/nusoft/data/flux/dk2nu/nova/2010/flugg_mn000z200i_20101117.gpcfgrid_lowth/";
+  dk2nu_loc += "*dk2nu.root";
+  FluxReader *fr = new FluxReader(dk2nu_loc, 2);
+
   // The FluxReader Constructor generates the same expanded list of files,
   // everytime it expands a wildcard (assuming there are no name changes, additions, or removals)
   // The user can set the number of files to use, and the number of files to skip
   // Default: use all files
-  FluxReader *fr = new FluxReader("/nova/ana/users/rhatcher/dk2nu-data/fullsplit/generic*.root");
+  // FluxReader *fr = new FluxReader(dk2nu_loc);
   // Second input: set the number of files to use (100 in this example)
-  // FluxReader *fr = new FluxReader("/nova/ana/users/rhatcher/dk2nu-data/fullsplit/generic*.root", 100);
+  // FluxReader *fr = new FluxReader(dk2nu_loc, 100);
   // Third input: how many files to skip (300 in this example)
-  // FluxReader *fr = new FluxReader("/nova/ana/users/rhatcher/dk2nu-data/fullsplit/generic*.root", 100, 300);
+  // FluxReader *fr = new FluxReader(dk2nu_loc, 100, 300);
   // To use all files after skipping some, leave the second input as 0 (in this example, all files after the first 200):
-  // FluxReader *fr = new FluxReader("/nova/ana/users/rhatcher/dk2nu-data/fullsplit/generic*.root" 0, 200);
+  // FluxReader *fr = new FluxReader(dk2nu_loc, 0, 200);
   // Note that the code will quit if there are no files after construction
   // Furthermore, if there are less files than what is specified by the second input,
   // the code will run on what is left but output the (smaller) number of files

@@ -43,12 +43,14 @@ void Demo0_FluxReader()
   p.AddDetector(knova_fd);
 
   // Next, we'll create a FluxReader object
-  // In this most basic constructor, we only provide a wildcard path name to the input files
+  // In the most basic constructor, we only provide a wildcard path name to the input files
   // The constructor will expand this into all files matching this string
   // Optional second and third arguments can be added--
   // the second sets the number of files to use;
   // the third sets the number of files to skip over
-  FluxReader *fr = new FluxReader("/nova/ana/users/rhatcher/dk2nu-data/fullsplit/generic*.root");
+  string dk2nu_loc = "/nusoft/data/flux/dk2nu/nova/2010/flugg_mn000z200i_20101117.gpcfgrid_lowth/";
+  dk2nu_loc += "*dk2nu.root";
+  FluxReader *fr = new FluxReader(dk2nu_loc, 2);
 
   // The FluxReader needs to generate something!
   // This is the most basic construction of a Spectra object,

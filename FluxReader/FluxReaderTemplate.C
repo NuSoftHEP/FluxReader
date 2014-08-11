@@ -33,7 +33,9 @@ void FluxReaderTemplate()
   p.AddDetector(knova_fd);
 
   // Next, we'll create a FluxReader object
-  FluxReader *fr = new FluxReader("/nova/ana/users/rhatcher/dk2nu-data/fullsplit/generic*.root");
+  string dk2nu_loc = "/nusoft/data/flux/dk2nu/nova/2010/flugg_mn000z200i_20101117.gpcfgrid_lowth/";
+  dk2nu_loc += "*dk2nu.root";
+  FluxReader *fr = new FluxReader(dk2nu_loc, 2);
 
   // The FluxReader needs to generate something!
   fr->AddSpectra(p, "enu", "Energy (GeV)", Bins(100, 0., 10.), kEnergy);
