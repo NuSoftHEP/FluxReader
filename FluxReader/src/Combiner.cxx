@@ -228,7 +228,7 @@ namespace flxrd
             TH1* h = (TH1*)((TH1*)gDirectory->Get(hName.c_str()))->Clone();
 
             for(unsigned int i_par  = 1; i_par  < n_par;  ++i_par) {
-              index += n_par; // This corresponds to an increment of the Parent index
+              index += n_flav; // This corresponds to an increment of the Parent index
               hName = spec + "_" + fParamsMap[spec].NameTag(index);
 
               h->Add((TH1*)gDirectory->Get(hName.c_str()));
