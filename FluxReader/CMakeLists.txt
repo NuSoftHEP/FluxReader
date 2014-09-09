@@ -4,7 +4,6 @@
 #   ROOTSYS  e.g. /nusoft/app/externals/root/v5_34_18a/Linux64bit+2.6-2.5-nu-e5-debug
 #   DK2NU    e.g. /nusoft/app/externals/dk2nu/v01_00_00/Linux64bit+2.6-2.5/debug-e5/dk2nu
 #
-# RWH this is a test
 #------------------------------------------------------------------------------
 # Setup the project
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
