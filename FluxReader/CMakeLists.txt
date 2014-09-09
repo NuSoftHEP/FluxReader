@@ -4,7 +4,7 @@
 #   ROOTSYS  e.g. /nusoft/app/externals/root/v5_34_18a/Linux64bit+2.6-2.5-nu-e5-debug
 #   DK2NU    e.g. /nusoft/app/externals/dk2nu/v01_00_00/Linux64bit+2.6-2.5/debug-e5/dk2nu
 #
-
+# RWH this is a test
 #------------------------------------------------------------------------------
 # Setup the project
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
@@ -44,22 +44,22 @@ include_directories(${PROJECT_SOURCE_DIR}/include
                     $ENV{DK2NU}/tree)
 
 set(_root_internal_libraries
-    Core.so
-    Cint.so
-    RIO.so
-    Net.so
-    Hist.so
-    Graf.so
-    Graf3d.so
-    Gpad.so
-    Tree.so
-    Rint.so
-    Postscript.so
-    Matrix.so
-    Physics.so
-    MathCore.so
-    Thread.so
-    EG.so
+    Core
+    Cint
+    RIO
+    Net
+    Hist
+    Graf
+    Graf3d
+    Gpad
+    Tree
+    Rint
+    Postscript
+    Matrix
+    Physics
+    MathCore
+    Thread
+    EG
 )
 set(Root_LIBRARIES ${_root_internal_libraries})
 
