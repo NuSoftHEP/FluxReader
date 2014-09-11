@@ -55,7 +55,7 @@ namespace flxrd
       /// Evaluates s(x), returning s(x) if s(x) > 0 and 0 otherwise, as cross sections are always positive
       double XSecEval(TSpline3* s, double x);
 
-      const std::vector<int>         kNuPDG   = {12,-12,14,-14,16-16}; ///< Valid neutrino PDG inputs
+      const std::vector<int>         kNuPDG   = {12,-12,14,-14,16,-16}; ///< Valid neutrino PDG inputs
 
       const std::vector<std::string> kTarget  = {"H","C","N","O","S","Cl","Ti","Fe","CH2"}; ///< Valid target strings
 

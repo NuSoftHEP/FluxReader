@@ -646,13 +646,13 @@ namespace flxrd
 
     // Easter egg.
     if((pdg1 == pdg2) && (tar1 == tar2) && (type1 == type2)) {
-      if(pdg1 == 12) {
+      if(pdg1 == 12 || pdg1 == -12) {
         title = "http://www.youtube.com/watch?v=WM8bTdBs-cw";
       }
-      if(pdg1 == 14) {
+      if(pdg1 == 14 || pdg1 == -14) {
         title = "http://www.youtube.com/watch?v=ftjEcrrf7r0";
       }
-      if(pdg1 == 16) {
+      if(pdg1 == 16 || pdg1 == -16) {
         title = "http://www.youtube.com/watch?v=UiKcd7yPLdU";
       }
     }
