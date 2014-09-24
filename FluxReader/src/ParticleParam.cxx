@@ -12,8 +12,8 @@ namespace flxrd
   const NuFlav NuFlav::kANutau = NuFlav("anutau", -16);
 
   // Present neutrino parents
-  const Parent Parent::kMuPlus  = Parent("muplus",  +13);
-  const Parent Parent::kMuMinus = Parent("muminus", -13);
+  const Parent Parent::kMuPlus  = Parent("muplus",  -13);
+  const Parent Parent::kMuMinus = Parent("muminus", +13);
   const Parent Parent::kPiPlus  = Parent("piplus",  +211);
   const Parent Parent::kPiMinus = Parent("piminus", -211);
   const Parent Parent::kKPlus   = Parent("Kplus",   +321);
