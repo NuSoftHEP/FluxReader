@@ -13,7 +13,7 @@ namespace flxrd
 
   // Detector locations from https://cdcvs.fnal.gov/redmine/projects/dk2nu/repository/entry/trunk/dk2nu/etc/locations.txt
 
-  // Null Detector
+  // MicroBooNE
   static Detector kMicroBooNE("MicroBooNE", "CH2",
                               5300., 7600., 67900., // position
                               0., 0., 0.,           // size
@@ -25,7 +25,7 @@ namespace flxrd
                            0., 0., 0.,                  // size
                            1);
 
-  // Null Detector
+  // MiniBooNE
   static Detector kMiniBooNE("MiniBooNE", "CH2",
                              2604., 7864., 74487., // position
                              0., 0., 0.,           // size
@@ -61,7 +61,7 @@ namespace flxrd
                              262.14, 393.27, 1424.52698,  // size
                              1);
 
-  // Null Detector
+  // SciBooNE
   static Detector kSciBooNE("SciBooNE", "CH2",
                             19760., 5340., 33940., // position
                             0., 0., 0.,            // size
