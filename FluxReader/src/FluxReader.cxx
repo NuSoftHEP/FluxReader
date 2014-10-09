@@ -28,6 +28,7 @@
 
 // Other External Includes
 #include "dk2nu.h"
+#include "dkmeta.h"
 #include "calcLocationWeights.h"
 
 namespace flxrd
@@ -73,7 +74,9 @@ namespace flxrd
 
     fReweightNuRay = false; // By default, turn this off for speed
 
-    fTreePath = "dk2nuTree"; // This is the default tree name in Dk2Nu files
+    fTreePath = "dk2nuTree";  // This is the default tree name in Dk2Nu files
+    fMetaPath = "dkmetaTree"; // This is the default metadata tree name in Dk2Nu files
+    fPOTPath  = "pots";       // This is the default POT variable name in Dk2Nu files
   }
 
   //---------------------------------------------------------------------------
@@ -91,39 +94,46 @@ namespace flxrd
     SetNuRayIndices(); // Setup the NuRay map so the detector name points to the first NuRay index for this detector
 
     // Make a TChain for all of the files
-    TChain* chain = new TChain(fTreePath.c_str());
+    TChain* fluxChain = new TChain(fTreePath.c_str());
+    TChain* metaChain = new TChain(fMetaPath.c_str());
     for(unsigned int i_file = 0, n_file = fInputFiles.size(); i_file < n_file; ++i_file) {
-      chain->Add(fInputFiles[i_file].c_str());
+      fluxChain->Add(fInputFiles[i_file].c_str());
+      metaChain->Add(fInputFiles[i_file].c_str());
     }
 
-    std::cout << "Looping over " << chain->GetNtrees() << " trees." << std::endl;
+    std::cout << "Looping over " << fluxChain->GetNtrees() << " trees." << std::endl;
 
-    SetBranches(chain); // Turn on the necessary branches
+    SetBranches(fluxChain, metaChain); // Turn on the necessary branches
 
     std::cout << "BEGIN!" << std::endl;
     std::cout << "--------------------------------------------------" << std::endl << std::endl;
 
-    int tot_entries = 0;  // Total entries over all input files
-    double tot_pot = 0;   // Sum of POT found in each file (an int is too small to store this number)
-    int tree_number = -1; // Store the tree number corresponding to the previous entry
+    int totEntries = 0;  // Total entries over all input files
+    double totPOT  = 0.; // Sum of POT found in each file (an int is too small to store this number)
+    int treeNumber = -1; // Store the tree number corresponding to the previous entry
 
     unsigned int i_entry = 0;
-    while(chain->GetEntry(i_entry)) {
+    while(metaChain->GetEntry(i_entry)) {
+      ++i_entry;
+
+      totPOT += fMeta->pots;
+    }
+
+    i_entry = 0; // Reset the entry number to 0
+    while(fluxChain->GetEntry(i_entry)) {
       ++i_entry;
 
       // Let the user know where things stand periodically
-      ++tot_entries;
-      if(tot_entries % 250000 == 0) {
-        std::cout << "On entry " << tot_entries << "." << std::endl;
+      ++totEntries;
+      if(totEntries % 250000 == 0) {
+        std::cout << "On entry " << totEntries << "." << std::endl;
       }
 
       // Let the user know when moving to a new tree, i.e., a new file
-      if(tree_number != chain->GetTreeNumber()) {
-        tree_number = chain->GetTreeNumber();
-        std::cout << "Starting on tree number " << tree_number << "." << std::endl;
+      if(treeNumber != fluxChain->GetTreeNumber()) {
+        treeNumber = fluxChain->GetTreeNumber();
+        std::cout << "Moving to tree number " << treeNumber << "." << std::endl;
       }
-
-      tot_pot += (double)fNu->potnum; // Sum up the POT
 
       // Only the NuRay energy and weight change by detector,
       // so only execute this block if those variables are needed
@@ -148,27 +158,27 @@ namespace flxrd
               fNu->nuray[index + i_use].E = energy;
               fNu->nuray[index + i_use].wgt = propwt;
             }
-          } // Number of detector uses
-        } // Loop through detectors
-      } // Reweight NuRay block
+          } // end of conditionals if detector uses is 1
+        } // end of loop over detectors
+      } // end of conditional if NuRay needs to be reweighted
 
       // Fill histograms with values read from the entry
       for(unsigned int i_spec = 0, n_spec = fSpectra.size(); i_spec < n_spec; ++i_spec) {
         fSpectra[i_spec]->Fill(fNu, fNuRayIndex);
       }
 
-    } // Loop over tree entries
+    } // end of loop over flux tree entries
 
     TDirectory* temp = gDirectory; // Store the current directory to go back to this after running/writing is complete
     out->cd();
 
     std::cout << "--------------------------------------------------" << std::endl;
-    std::cout << "Total POT: " << tot_pot << std::endl;
-    std::cout << "Number of entries: " << tot_entries << std::endl;
+    std::cout << "Total POT: " << totPOT << std::endl;
+    std::cout << "Number of entries: " << totEntries << std::endl;
 
     // Create total POT histogram
     TH1D* hPOT = new TH1D("TotalPOT", ";;POT", 1, 0., 1.);
-    hPOT->SetBinContent(1, tot_pot);
+    hPOT->SetBinContent(1, totPOT);
 
     // Write histograms to output file
     gDirectory->WriteTObject(hPOT); // Start by recording POT information
@@ -263,6 +273,14 @@ namespace flxrd
   }
 
   //---------------------------------------------------------------------------
+  void FluxReader::OverridePOTPath(std::string metapath, std::string potpath)
+  {
+    fMetaPath = metapath; // This will be the new metadata tree path
+    fPOTPath =  potpath;  // This will be the new path to the POT variable
+    return;
+  }
+
+  //---------------------------------------------------------------------------
   void FluxReader::OverrideDefaultVarName(std::string oldname, std::string newname)
   {
     // Don't add a new branch if there is nothing to replace
@@ -292,8 +310,6 @@ namespace flxrd
   //---------------------------------------------------------------------------
   void FluxReader::AddDefaultBranches()
   {
-    AddBranch("potnum"); // This is always used
-
     // If a ray needs to be reweighted, the calculation needs all of these values
     if(fBranchNames.find("nuray.E")   != fBranchNames.end() ||
        fBranchNames.find("nuray.wgt") != fBranchNames.end()) {
@@ -345,42 +361,81 @@ namespace flxrd
     }
 
     std::cout << std::endl;
+    return;
   }
 
   //---------------------------------------------------------------------------
-  void FluxReader::SetBranches(TTree *tree)
+  bool FluxReader::IsStandardDk2Nu()
   {
-    tree->SetBranchStatus("*", 0); // Start with all branches off
+    // Standard tree/variable names
+    std::string standardTree = "dk2nuTree";
+    std::string standardMeta = "dkmetaTree";
+    std::string standardPOT  = "pots";
+
+    if(fBranchOverrides.size() != 0    ||
+       fTreePath.compare(standardTree) ||
+       fMetaPath.compare(standardMeta) ||
+       fPOTPath .compare(standardPOT)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  //---------------------------------------------------------------------------
+  void FluxReader::SetBranches(TTree* fluxTree, TTree* metaTree)
+  {
+    // Start with all branches off
+    fluxTree->SetBranchStatus("*", 0);
+    metaTree->SetBranchStatus("*", 0);
 
     // This is the default block for using a normal Dk2Nu file
-    if(!fTreePath.compare("dk2nuTree") && fBranchOverrides.size() == 0) {
+    if(IsStandardDk2Nu()) {
       fBranches.reserve(fBranchNames.size());
 
       for(const std::string& branch : fBranchNames) {
         // std::cout << "Turning on branch " << branch << std::endl;
-        tree->SetBranchStatus(branch.c_str(), 1); // Turn on the branch
+        fluxTree->SetBranchStatus(branch.c_str(), 1); // Turn on the branch
 
         // Add the actual TBranch to the list of TBranches,
         // and abort if the branch does not exist to avoid a seg fault
         // std::cout << "Adding branch " << branch << std::endl;
-        fBranches.push_back(tree->GetBranch(branch.c_str()));
+        fBranches.push_back(fluxTree->GetBranch(branch.c_str()));
         if(!fBranches.back()) {
           std::cerr << "Tree has no branch \"" << branch
                     << "\". Asserting 0." << std::endl;
           assert(0);
         }
 
-        tree->AddBranchToCache(fBranches.back()); // Theoretically this speed things up...
+        fluxTree->AddBranchToCache(fBranches.back()); // Theoretically this speed things up...
       } // Loop over branch names
 
-      fNu = 0; // Make sure this pointer is not pointing to something else
+      // Turn on and add the branch for POT
+      metaTree->SetBranchStatus(fPOTPath.c_str(), 1);
+      fBranches.push_back(metaTree->GetBranch(fPOTPath.c_str()));
+      if(!fBranches.back()) {
+        std::cerr << "Tree has no branch \"" << fPOTPath
+                  << "\". Asserting 0." << std::endl;
+        assert(0);
+      }
+      metaTree->AddBranchToCache(fBranches.back());
+
+      // Make sure these pointers are not pointing to something else
+      fNu = 0;
+      fMeta = 0;
 
       // Point the Dk2Nu object in the tree to the class Dk2Nu object, fNu 
       std::string fullTreePath = "dk2nu";
-      tree->SetBranchAddress(fullTreePath.c_str(), &fNu);
+      fluxTree->SetBranchAddress(fullTreePath.c_str(), &fNu);
+
+      // Point the DkMeta object in the tree to the class DkMeta object, fMeta 
+      std::string fullMetaPath = "dkmeta";
+      metaTree->SetBranchAddress(fullMetaPath.c_str(), &fMeta);
     }
     else {
-      fNu = 0; // Make sure this pointer is not pointing to something else
+      // Make sure these pointers are not pointing to something else
+      fNu = 0;
+      fMeta = 0;
 
       // Create a map with default Dk2Nu branch names pointing to the actual values in the Dk2Nu object, fNu
       std::map<std::string, void*> m = OverrideAddresses(fNu);
@@ -395,9 +450,13 @@ namespace flxrd
           branchPath = fBranchOverrides[branch];
         }
 
-        tree->SetBranchStatus(branchPath.c_str(), 1); // Turn on the branch
-        tree->SetBranchAddress(branchPath.c_str(), m[branch]); // Point the branch into the class Dk2Nu object 
+        fluxTree->SetBranchStatus(branchPath.c_str(), 1); // Turn on the branch
+        fluxTree->SetBranchAddress(branchPath.c_str(), m[branch]); // Point the branch into the class Dk2Nu object 
       }
+
+      // Turn on and set the branch for the POTs
+      metaTree->SetBranchStatus(fPOTPath.c_str(), 1);
+      metaTree->SetBranchAddress(fPOTPath.c_str(), &fMeta->pots);
     }
 
     const int num_per_line = 8;

@@ -20,7 +20,8 @@ class TDirectory;
 class TH1;
 class TTree;
 
-namespace bsim { class Dk2Nu; }
+namespace bsim { class Dk2Nu;  }
+namespace bsim { class DkMeta; }
 
 namespace flxrd
 {
@@ -64,6 +65,7 @@ namespace flxrd
 
     /// Allow FluxReader to read files that are not standard Dk2Nu files
     void OverrideTreeName(std::string treepath);
+    void OverridePOTPath(std::string metapath, std::string potpath);
     void OverrideDefaultVarName(std::string oldname, std::string newname);
 
   private:
@@ -77,8 +79,11 @@ namespace flxrd
     /// Notify the user of the parameters to be run over
     void InitialMessage();
 
-    /// Set necessary addresses for entries in the flux tree 
-    void SetBranches(TTree* tree);
+    /// Check if any standard Dk2Nu variable names have been overriden
+    bool IsStandardDk2Nu();
+
+    /// Set necessary addresses for entries in the flux and metadata trees 
+    void SetBranches(TTree* fluxTree, TTree* metaTree);
 
     /// Set up the map which points a detector name to its first index in the Dk2Nu object's NuRay vector
     void SetNuRayIndices();
@@ -100,7 +105,8 @@ namespace flxrd
 
     std::vector<std::string> fInputFiles; ///< List of input files to run over
 
-    bsim::Dk2Nu* fNu; ///< Dk2Nu object that will store values for each input file entry
+    bsim::Dk2Nu*  fNu;   ///< Dk2Nu object that will store values for each input file entry
+    bsim::DkMeta* fMeta; ///< DkMeta object that will store metadata about the Dk2Nu tree
 
     std::map<std::string, int> fNuRayIndex; ///< Map pointing from a detector name to its first index in the Dk2Nu object's NuRay vector
 
@@ -112,5 +118,7 @@ namespace flxrd
     std::vector<Spectra*> fSpectra;
 
     std::string fTreePath; ///< Path that points to the tree in each input file
+    std::string fMetaPath; ///< Path that points to the metadata tree of an input file
+    std::string fPOTPath;  ///< Path that points to the POT variable in the metadata tree
   };
 }
