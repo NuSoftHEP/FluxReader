@@ -30,7 +30,7 @@ void FluxReaderTemplate()
   Parameters p(false);
 
   // Add at least one detector
-  p.AddDetector(knova_fd);
+  p.AddDetector(kNOvA_FD);
 
   // Next, we'll create a FluxReader object
   string dk2nu_loc = "/nusoft/data/flux/dk2nu/nova/2010/flugg_mn000z200i_20101117.gpcfgrid_lowth/";

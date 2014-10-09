@@ -30,8 +30,8 @@ void Demo4_Combiner()
   Parameters p(false);
 
   // Add a couple of detectors
-  p.AddDetector(knova_nd);
-  p.AddDetector(knova_fd);
+  p.AddDetector(kNOvA_ND);
+  p.AddDetector(kNOvA_FD);
 
   string dk2nu_loc = "/nusoft/data/flux/dk2nu/nova/2010/flugg_mn000z200i_20101117.gpcfgrid_lowth/";
   dk2nu_loc += "*dk2nu.root";
@@ -41,7 +41,7 @@ void Demo4_Combiner()
   fr->AddSpectra(p, "enu", "Energy (GeV)", Bins(100, 0., 10.), kEnergy);
 
   // Add this "detector correlated" Spectra again
-  fr->AddSpectra(p, "bmmat", "nova_nd", "nova_fd", "Energy(GeV)", Bins(100, 0., 10.), kEnergy);
+  fr->AddSpectra(p, "bmmat", "NOvA-ND", "NOvA-FD", "Energy(GeV)", Bins(100, 0., 10.), kEnergy);
 
   TFile* out = new TFile("/nova/ana/users/gkafka/FluxReader/demo4.root", "RECREATE");
 

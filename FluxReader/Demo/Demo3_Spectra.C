@@ -33,8 +33,8 @@ void Demo3_Spectra()
   Parameters p(false);
 
   // Add a couple of detectors
-  p.AddDetector(knova_nd);
-  p.AddDetector(knova_fd);
+  p.AddDetector(kNOvA_ND);
+  p.AddDetector(kNOvA_FD);
 
   string dk2nu_loc = "/nusoft/data/flux/dk2nu/nova/2010/flugg_mn000z200i_20101117.gpcfgrid_lowth/";
   dk2nu_loc += "*dk2nu.root";
@@ -90,7 +90,7 @@ void Demo3_Spectra()
   // This particular example is also called a beam matrix
   // When examining the output, you may notice some extra plots with this type of Spectra--
   // those will be the subject of the next tutorial
-  fr->AddSpectra(p, "bmmat", "nova_nd", "nova_fd", "Energy(GeV)", Bins(100, 0., 10.), kEnergy);
+  fr->AddSpectra(p, "bmmat", "NOvA-ND", "NOvA-FD", "Energy(GeV)", Bins(100, 0., 10.), kEnergy);
 
   TFile* out = new TFile("/nova/ana/users/gkafka/FluxReader/demo3.root", "RECREATE");
 

@@ -35,8 +35,8 @@ void Demo5_Advanced()
 {
   Parameters p(false);
 
-  p.AddDetector(knova_nd);
-  // p.AddDetector(knova_fd);
+  p.AddDetector(kNOvA_ND);
+  // p.AddDetector(kNOvA_FD);
 
   // The Parent object is used to define a neutrino... parent
   // This is just a name (std::string) and pdg (int)
@@ -50,11 +50,11 @@ void Demo5_Advanced()
   // A size (cm, 3 doubles), and a "number of uses" (int)
   // The number of uses defines how many times to smear
   // a neutrino ray through the detector
-  /*Detector knova_nd_shift("nova_nd_shift", "CH2",
+  /*Detector kNOvA_ND_Shift("NOvA-ND-Shift", "CH2",
                            1141.4, -345.6, 99566.5,     // position, z shifted by +100 cm
                            262.14, 393.27, 1424.52698,  // size
                            1); // uses */
-  // p.AddDetector(knova_nd_shift);
+  // p.AddDetector(kNOvA_ND_Shift);
 
   string dk2nu_loc = "/nusoft/data/flux/dk2nu/nova/2010/flugg_mn000z200i_20101117.gpcfgrid_lowth/";
   dk2nu_loc += "*dk2nu.root";
@@ -89,7 +89,7 @@ void Demo5_Advanced()
   // It is possible to predict which uses value will be the one picked,
   // but it is safer to set one value and stick with it,
   // especially since this is the only one that will be used anyway
-  // p.SetDetUses("nova_nd", 10);
+  // p.SetDetUses("NOvA-ND", 10);
 
   // Add a Spectra object
   fr->AddSpectra(p, "enu", "Energy (GeV)", Bins(100, 0., 10.), kEnergy);

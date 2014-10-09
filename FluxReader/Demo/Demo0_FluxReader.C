@@ -39,8 +39,8 @@ void Demo0_FluxReader()
 
   // Add a couple of detectors
   // These are predefined in Detectors.h
-  p.AddDetector(knova_nd);
-  p.AddDetector(knova_fd);
+  p.AddDetector(kNOvA_ND);
+  p.AddDetector(kNOvA_FD);
 
   // Next, we'll create a FluxReader object
   // In the most basic constructor, we only provide a wildcard path name to the input files

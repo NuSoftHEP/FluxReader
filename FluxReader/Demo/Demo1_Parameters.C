@@ -34,8 +34,8 @@ void Demo1_Parameters()
   Parameters p(false);
 
   // Add a couple of detectors
-  p.AddDetector(knova_nd);
-  p.AddDetector(knova_fd);
+  p.AddDetector(kNOvA_ND);
+  p.AddDetector(kNOvA_FD);
 
   // What if we don't care about neutrinos from muons?
   // These can be easily removed in 3 different ways
@@ -75,7 +75,7 @@ void Demo1_Parameters()
   // Order also matters to Spectra
   // The current configuration of the Parameters object is what will get created
   // If we removed a detector now:
-  p.RemoveDetector("nova_fd");
+  p.RemoveDetector("NOvA-FD");
   // Then added a new Spectra (which will be the same, otherwise, for comparison purposes)
   fr->AddSpectra(p, "enu2", "Energy (GeV)", Bins(100, 0., 10.), kEnergy);
   // This Spectra will have the same flavors, parents and cross sections,
