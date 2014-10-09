@@ -1,22 +1,13 @@
 source /nusoft/app/externals/setup
 setup cmake
 
-if(env | grep -q ^ROOTSYS)
-then
-  echo "ROOT has already been setup."
-  echo "If the version is not correct, this may cause errors."
-  echo "If this occurs, try starting a fresh terminal session."
-else
-  setup root       v5_34_18a -q debug:e5:nu
-fi
-
 if(env | grep -q ^DK2NU)
 then
   echo "Dk2Nu has already been setup."
   echo "If the version is not correct, this may cause errors."
   echo "If this occurs, try starting a fresh terminal session."
 else
-  setup dk2nu      v01_00_00 -q debug:e5
+  setup dk2nu      v01_01_03 -q debug:e5
 fi
 
 if(env | grep -q ^GENIEXSECPATH)
