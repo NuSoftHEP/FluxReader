@@ -33,7 +33,11 @@ void FluxReaderTemplate()
   p.AddDetector(kNOvA_FD);
 
   // Next, we'll create a FluxReader object
-  string dk2nu_loc = "/nusoft/data/flux/dk2nu/nova/2010/flugg_mn000z200i_20101117.gpcfgrid_lowth/";
+  // Note: "Run????/" expanded at the terminal would only pick up folders with four characters between "Run" and "/"
+  //       "Run*/" would pick up all folders starting with Run
+  // I.e., "Run????/" will not pick up "Run0002.BAD/", but "Run*" will
+  // However, "??/" is a trigraph, so to avoid warnings and an error, each "?" must be escaped
+  std::string dk2nu_loc = "/nusoft/data/flux/blackbird-numix/flugg_mn000z200i_rp11_lowth_pnut_f11f093bbird/Run\?\?\?\?/";
   dk2nu_loc += "*dk2nu.root";
   FluxReader *fr = new FluxReader(dk2nu_loc, 2);
 
