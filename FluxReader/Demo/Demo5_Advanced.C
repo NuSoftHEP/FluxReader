@@ -56,7 +56,7 @@ void Demo5_Advanced()
                            1); // uses */
   // p.AddDetector(kNOvA_ND_Shift);
 
-  string dk2nu_loc = "/nusoft/data/flux/blackbird-numix/flugg_mn000z200i_rp11_lowth_pnut_f11f093bbird/Run\?\?\?\?/";
+  string dk2nu_loc = "/nusoft/data/flux/blackbird-numix/flugg_mn000z200i_rp11_lowth_pnut_f11f093bbird/dk2nu/";
   dk2nu_loc += "*dk2nu.root";
   FluxReader *fr = new FluxReader(dk2nu_loc, 2);
 
