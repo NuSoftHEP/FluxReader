@@ -1,6 +1,9 @@
 #include "Utilities.h"
 
 // C/C++ Includes
+#include <cstring>
+#include <fstream>
+#include <iostream>
 #include "sys/stat.h"
 #include "wordexp.h"
 
@@ -23,6 +26,91 @@ namespace flxrd
     }
 
     return bins;
+  }
+
+  //---------------------------------------------------------------------------
+  std::vector<double> LoadDetCoords(std::string detName)
+  {
+    std::vector<double> coords; // Return vector
+
+    // Set the path to the detector locations file
+    std::string locationFilePath = std::getenv("DK2NU");
+    locationFilePath += "/etc/locations.txt";
+
+    // Open the detector locations file
+    std::ifstream locationFile;
+    locationFile.open(locationFilePath.c_str());
+
+    // Make sure the file opened properly
+    if(!locationFile.good()) {
+      std::cout << "Error opening location file." << std::endl;
+      return coords;
+    }
+
+    // Variables for file reading
+    const int maxChar = 256;    // Max number of characters to read from a single line from the input file
+    char locationLine[maxChar]; // Array to hold a single line from the input file
+    bool detFound = false;      // Flag whether the requested input detector has been found
+
+    // Loop over lines from the input file until the detector is found or the end of the file is reached
+    while(!(detFound || locationFile.eof())) {
+      // Get the next line
+      if(locationFile.getline(locationLine, maxChar).fail()) {
+        std::cout << "Error accessing the next line. " << std::endl
+                  << "It may just be the end of the file, "
+                  << "and the EOF bit may not have been set as expected." << std::endl;
+        break;
+      }
+
+      // Make a std::string from the char array
+      // This must be done BEFORE tokenizing the character array,
+      // as strtok "destorys" the array as it goes
+      std::string stringLine(locationLine);
+
+      // Get the first set of contiguous characters that skips leading and contains no spaces
+      // If the first non-space character is a '#', the line is a comment and can be skipped
+      char* token = strtok(locationLine, " ");
+      if(token[0] == '#') { continue; }
+
+      if(stringLine.find(detName) != std::string::npos) {
+        // If the input detector name is in the current line, set the boolean flag to terminate the while loop
+        detFound = true;
+
+        // Remove the detector from the line
+        // All that should remain is leading/tailing white space,
+        // and three coordinates separated by (any number of) spaces
+        // Then, put the result back into the character array
+        stringLine.erase(stringLine.find(detName), detName.size());
+        sprintf(locationLine, "%s", stringLine.c_str());
+      } // end of condition that the detector name was in the current line from the location file
+    } // end of loop until detector name is found or end of the location file is reached
+
+    // If the detector was not found, warn the user and exit
+    if(!detFound) {
+      std::cout << "Could not find " << detName << "." << std::endl;
+      return coords;
+    }
+
+    // Tokenize the remainder of the line
+    // Get the first coordinate
+    char* coordChar = strtok(locationLine, " ");
+    for(int i = 0, n = 3; i < n; ++i) {
+      // Warn the user if there were not 3 coordinates found
+      if(!coordChar) {
+        std::cout << "Could only find " << i << " position entries in the line." << std::endl;
+        return coords;
+      }
+
+      // Take the current "token," convert it to a double, add it to the return vector
+      double coord = atof(coordChar);
+      coords.push_back(coord);
+
+      // Get the next coordinate (or token)
+      // This should probably return a null pointer on the third loop, but that is okay
+      coordChar = strtok(NULL, " ");
+    }
+
+    return coords;
   }
 
   //---------------------------------------------------------------------------

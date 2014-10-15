@@ -2,7 +2,6 @@
 
 // C/C++ Includes
 #include <map>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -13,6 +12,9 @@ namespace flxrd
 {
   /// Make a vector of equally spaced bin edges from a min value, max value, and number of bins
   std::vector<double> Bins(int nbins, double min, double max);
+
+  /// Load the detector coordinates from dk2nu
+  std::vector<double> LoadDetCoords(std::string detName); 
 
   /// Create a map of Dk2Nu branch name labels pointing to corresponding locations in a Dk2Nu object
   std::map<std::string, void*> OverrideAddresses(bsim::Dk2Nu* nu);

@@ -19,6 +19,11 @@ namespace flxrd
              const double& sizex,  const double& sizey,  const double& sizez,
              const int& nuses);
 
+    Detector(const std::string& det_name, const std::string& target,
+             const std::vector<double>& coords,
+             const std::vector<double>& sizes,
+             const int& nuses);
+
     /// Get detector name
     std::string GetDetName() const { return fDetName; }
 
