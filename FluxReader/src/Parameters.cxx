@@ -64,8 +64,9 @@ namespace flxrd
   }
 
   //---------------------------------------------------------------------------
-  Parameters::Parameters(bool SignSensitive)
-    : fSignSensitive(SignSensitive)
+  Parameters::Parameters(bool SignSensitive, bool verbosity)
+    : fSignSensitive(SignSensitive),
+      fVerbosity(verbosity)
   {
     SetDefaults(SignSensitive); // Set sensible default flavors, parents, and cross sections
 
@@ -75,6 +76,7 @@ namespace flxrd
   //---------------------------------------------------------------------------
   Parameters::Parameters(const Parameters& params)
     : fSignSensitive(params.IsSignSensitive()),
+      fVerbosity(params.fVerbosity),
       fNuFlav(params.fNuFlav),
       fParent(params.fParent),
       fXSec  (params.fXSec),
@@ -468,7 +470,9 @@ namespace flxrd
       }
     }
 
-    std::cout << "Could not find " << PDG << " in flavor vector." << std::endl;
+    if(fVerbosity) {
+      std::cout << "Could not find " << PDG << " in flavor vector." << std::endl;
+    }
     return false;
   }
 
@@ -482,7 +486,9 @@ namespace flxrd
       }
     }
 
-    std::cout << "Could not find " << PDG << " in parent vector." << std::endl;
+    if(fVerbosity) {
+      std::cout << "Could not find " << PDG << " in parent vector." << std::endl;
+    }
     return false;
   }
 

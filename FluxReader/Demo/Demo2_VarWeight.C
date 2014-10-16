@@ -31,7 +31,8 @@ using namespace flxrd;
 
 void Demo2_VarWeight()
 {
-  Parameters p(false);
+  // Turn off verbosity, to avoid tons of output from the last Spectra in this demo
+  Parameters p(false, false);
 
   // Add a couple of detectors
   p.AddDetector(kNOvA_ND);

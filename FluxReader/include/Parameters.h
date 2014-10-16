@@ -68,7 +68,7 @@ namespace flxrd
     friend class SpectraCorrDet;
 
     /// This is the default constructor for users
-    Parameters(bool SignSensitive = true);
+    Parameters(bool SignSensitive = true, bool verbosity = true);
 
     /// Add a detector to run over
     void AddDetector(const Detector& det);
@@ -182,6 +182,7 @@ namespace flxrd
     Indices end() const;
 
     bool fSignSensitive; ///< Store whether neutrino sign is considered (true) or ignored (false)
+    bool fVerbosity;     ///< Determine how much output to print
 
     /// Parameter tag vectors
     std::vector<NuFlav>      fNuFlav;

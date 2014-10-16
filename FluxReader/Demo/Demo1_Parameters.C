@@ -27,11 +27,17 @@ using namespace flxrd;
 
 void Demo1_Parameters()
 {
+  // The first input to the parameters constructor is whether to consider neutrino parent sign
+  // The second input determines how verbose the warnings from Parameters should be
+  // If verbosity is turned off (false), then Parameters will not display the following warnings:
+  // The current neutrino ray has a flavor not in the flavor vector
+  // The current neutrino ray has a parent not in the parent vector
+  Parameters p(false, true);
+
   // Recall the default parameters (ignoring parent sign):
   // The default flavors are nue, anti-nue, numu, and anti-numu
   // The default parents are muons, pions, kaons, and K-Long
   // The default cross sections are none, CC, and NC
-  Parameters p(false);
 
   // Add a couple of detectors
   p.AddDetector(kNOvA_ND);
