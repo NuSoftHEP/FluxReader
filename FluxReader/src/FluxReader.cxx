@@ -65,11 +65,16 @@ namespace flxrd
       fInputFiles.erase(fInputFiles.begin() + numFiles, fInputFiles.end());
     }
 
-    std::cout << fInputFiles.size() << " files were found matching the input criteria." << std::endl;
-
     if(fInputFiles.size() == 0) {
-      std::cout << "Error: there are no files to run over. Asserting 0." << std::endl;
-      assert(0);
+      std::cout << "Error: there are no files to run over. Aborting." << std::endl;
+      abort();
+    }
+
+    std::cout << fInputFiles.size() << " files were found matching the input criteria:" << std::endl;
+
+    // Output the list of file names for the user
+    for(const auto& fileName : fInputFiles) {
+      std::cout << fileName << std::endl;
     }
 
     fReweightNuRay = false; // By default, turn this off for speed
@@ -96,9 +101,10 @@ namespace flxrd
     // Make a TChain for all of the files
     TChain* fluxChain = new TChain(fTreePath.c_str());
     TChain* metaChain = new TChain(fMetaPath.c_str());
-    for(unsigned int i_file = 0, n_file = fInputFiles.size(); i_file < n_file; ++i_file) {
-      fluxChain->Add(fInputFiles[i_file].c_str());
-      metaChain->Add(fInputFiles[i_file].c_str());
+    for(const auto& fileName : fInputFiles) {
+      // Chain together the trees from each file
+      fluxChain->Add(fileName.c_str());
+      metaChain->Add(fileName.c_str());
     }
 
     std::cout << "Looping over " << fluxChain->GetNtrees() << " trees." << std::endl;
@@ -138,7 +144,7 @@ namespace flxrd
       // Only the NuRay energy and weight change by detector,
       // so only execute this block if those variables are needed
       if(fReweightNuRay) {
-        for(const Detector& det : fDetectors) {
+        for(const auto& det : fDetectors) {
           int index = fNuRayIndex[det.GetDetName()]; // Get the NuRay index for this detector
 
           double energy = 0., propwt = 0.;
@@ -163,8 +169,8 @@ namespace flxrd
       } // end of conditional if NuRay needs to be reweighted
 
       // Fill histograms with values read from the entry
-      for(unsigned int i_spec = 0, n_spec = fSpectra.size(); i_spec < n_spec; ++i_spec) {
-        fSpectra[i_spec]->Fill(fNu, fNuRayIndex);
+      for(const auto& spectra : fSpectra) {
+        spectra->Fill(fNu, fNuRayIndex);
       }
 
     } // end of loop over flux tree entries
@@ -183,10 +189,10 @@ namespace flxrd
     // Write histograms to output file
     gDirectory->WriteTObject(hPOT); // Start by recording POT information
 
-    for(unsigned int i_spec = 0, n_spec = fSpectra.size(); i_spec < n_spec; ++i_spec) {
-      out->mkdir(fSpectra[i_spec]->GetTitle().c_str()); // Create directory in output file
-      out->cd(fSpectra[i_spec]->GetTitle().c_str()); // Go to the new directory
-      fSpectra[i_spec]->WriteHists(gDirectory); // Have Spectra object write out its contents
+    for(const auto& spectra : fSpectra) {
+      out->mkdir(spectra->GetTitle().c_str()); // Create directory in output file
+      out->cd(spectra->GetTitle().c_str()); // Go to the new directory
+      spectra->WriteHists(gDirectory); // Have Spectra object write out its contents
     }
 
     temp->cd(); // Return to the original directory
@@ -492,13 +498,13 @@ namespace flxrd
   //---------------------------------------------------------------------------
   void FluxReader::SetNuRayIndices()
   {
-    for(unsigned int i_spec = 0, n_spec = fSpectra.size(); i_spec < n_spec; ++i_spec) {
-      std::set<Detector> sdets = fSpectra[i_spec]->Detectors(); // Get the detectors to be used in this Spectra
+    for(const auto& spectra : fSpectra) {
+      std::set<Detector> sdets = spectra->Detectors(); // Get the detectors to be used in this Spectra
       fDetectors.insert(sdets.begin(), sdets.end()); // Add the Spectra's list to the full FluxReader list
     }
 
     int index = 0;
-    for(const Detector& det : fDetectors) {
+    for(const auto& det : fDetectors) {
       // This will be the first index in the NuRay vector in the Dk2Nu object corresponding to the current detector
       fNuRayIndex[det.GetDetName()] = index;
 
