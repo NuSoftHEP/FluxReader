@@ -40,8 +40,8 @@ namespace flxrd
 
         if(files.size() > 1) { // Show user all files if more than one appears
           std::cout << "More than one file was found." << std::endl; 
-          for(unsigned int i = 0, n = files.size(); i < n; ++i) {
-            std::cout << files[i] << std::endl;
+          for(const auto& fileName : files) {
+            std::cout << fileName << std::endl;
           }
         }
       }
@@ -75,8 +75,8 @@ namespace flxrd
   //----------------------------------------------------------------------
   void XSec::ListIntTypes()
   {
-    for(unsigned int i = 0, n = kIntType.size(); i < n; ++i) {
-      std::cout << kIntType[i] << std::endl;
+    for(const auto& allowedType : kIntType) {
+      std::cout << allowedType << std::endl;
     }
 
     return;
@@ -87,15 +87,18 @@ namespace flxrd
   {
     TGraph* gRet = new TGraph();
 
+    // Copy this string into a local variable that can be passed by reference
+    std::string typeCopy(type);
+
     // Check for necessary recursion combinations
     // If target is CH2, need to add graphs from C and 2 H's
     if(tar == "CH2") {
-      gRet = GetGraphMath( GetGraph(pdg,"C",type), 1,
-                           GetGraph(pdg,"H",type), 2 );
+      gRet = GetGraphMath(GetGraph(pdg, "C", type), 1,
+                          GetGraph(pdg, "H", type), 2);
     }
     else { // Base TGraph pulling scheme
       // Create the string pointing to the correct cross section directory
-      SetXSecGenStr(pdg, tar, type);
+      SetXSecGenStr(pdg, tar, typeCopy);
 
       // Open the cross section file
       TFile* f = new TFile( (GetXSecFileName()).c_str() );
@@ -106,7 +109,11 @@ namespace flxrd
       f->Close(); // Close the file
     }
 
-    gRet->SetTitle(MakeXSecTitle(pdg, tar, type).c_str()); // Set the graph title
+    // Set the graph title and axis labels
+    std::string histTitle = MakeXSecTitle(pdg, tar, typeCopy);
+    histTitle += ";Energy (GeV);10^{-38} cm^{2}";
+    gRet->SetTitle(histTitle.c_str());
+
     return gRet;
   }
 
@@ -143,7 +150,17 @@ namespace flxrd
     }
 
     TGraph* gRet = new TGraph(n, x, yRet); // Create the new graph
-    gRet->SetTitle(MakeXSecRatioTitle(pdg1, tar1, type1, pdg2, tar2, type2).c_str());
+
+    // The interaction type passed to MakeXSecRatioTitle must be modified separately
+    // But don't print the warning message a second time (SetXSecGenStr already will have)
+    std::string typeCopy1(type1);
+    NuElectronCheck(typeCopy1, pdg1, false);
+    std::string typeCopy2(type2);
+    NuElectronCheck(typeCopy2, pdg2, false);
+
+    std::string histTitle = MakeXSecRatioTitle(pdg1, tar1, typeCopy1, pdg2, tar2, typeCopy2);
+    histTitle += ";Energy (GeV);";
+    gRet->SetTitle(histTitle.c_str());
 
     return gRet;
   }
@@ -162,7 +179,10 @@ namespace flxrd
     TGraph* g = GetGraph(pdg, tar, type); // Get the graph to generate the spline
 
     TSpline3* s = new TSpline3("", g, opt, begin_val); // Generate spline
-    s->SetTitle(g->GetTitle());
+
+    std::string histTitle = g->GetTitle();
+    histTitle += ";Energy (GeV);10^{-38} cm^{2}";
+    s->SetTitle(histTitle.c_str());
 
     return s;
   }
@@ -176,7 +196,10 @@ namespace flxrd
                               pdg2, tar2, type2); // Get the graph to generate the spline
 
     TSpline3* s = new TSpline3("", g, opt, begin_val); // Generate spline
-    s->SetTitle(g->GetTitle());
+
+    std::string histTitle = g->GetTitle();
+    histTitle += ";Energy (GeV);";
+    s->SetTitle(histTitle.c_str());
 
     return s;
   }
@@ -228,7 +251,7 @@ namespace flxrd
       bin_val = 0; // Reset bin value calculation variable
     } // Loop over histogram bins
 
-    ret->SetTitle(s->GetTitle());
+    ret->SetTitle(s->GetTitle()); // This should pick up the actual title and y axis label (if applicable)
     return ret;
   }
 
@@ -238,7 +261,7 @@ namespace flxrd
     // This function is similar to the equally spaced bins version above
     // See its comments for more details
 
-    TH1* ret =  new TH1D("",";Energy (GeV);", nbins, edges);
+    TH1* ret =  new TH1D("",";Energy (GeV);10^{-38} cm^{2}", nbins, edges);
 
     TAxis* ax = ret->GetXaxis();
 
@@ -280,7 +303,7 @@ namespace flxrd
       bin_val = 0;
     } // Loop over histogram bins
 
-    ret->SetTitle(s->GetTitle());
+    ret->SetTitle(s->GetTitle()); // This should pick up the actual title and y axis label (if applicable)
     return ret;
   }
 
@@ -291,7 +314,7 @@ namespace flxrd
     const int n = g1->GetN();
     double x[n], y1[n], y2[n], yRet[n];
 
-    for(int i=0; i<n; ++i) {
+    for(int i = 0; i < n; ++i) {
       g1->GetPoint(i, x[i], y1[i]);
       g2->GetPoint(i, x[i], y2[i]);
 
@@ -661,15 +684,36 @@ namespace flxrd
   }
 
   //----------------------------------------------------------------------
-  void XSec::SetXSecGenStr(int pdg, std::string tar, std::string type)
+  void XSec::NuElectronCheck(std::string& type, int pdg, bool inSetXSecGenStr)
+  {
+    if     (!type.compare("ve_nc") && abs(pdg) == 12) {
+      if(inSetXSecGenStr) {
+        std::cout << type << " is not available for electron or anti-electron neutrinos." << std::endl;
+        std::cout << "Changing type to ve_ccncmix." << std::endl;
+      }
+      type = "ve_ccncmix";
+    }
+    else if(!type.compare("ve_ccncmix") && abs(pdg) != 12) {
+      if(inSetXSecGenStr) {
+        std::cout << type << " is only available for electron and anti-electron neutrions." << std::endl;
+        std::cout << "Changing type to ve_nc." << std::endl;
+      }
+      type = "ve_nc";
+    }
+
+    return;
+  }
+
+  //----------------------------------------------------------------------
+  void XSec::SetXSecGenStr(int pdg, std::string tar, std::string& type)
   {
     // String has form "pdg_(bar_)Ab##/InteractionType",
     // where Ab is the atom code and ## is the number of nucleons
     bool valid_input = false;
     fXSecGenStr = "nu_"; // All directories in the cross section file begin with this string
 
-    for(unsigned int i = 0, n = kNuPDG.size(); i < n; ++i) {
-      if(pdg == kNuPDG[i]) { // Next component in the directory string is the neutrino type
+    for(const auto& allowedPDG : kNuPDG) {
+      if(pdg == allowedPDG) { // Next component in the directory string is the neutrino type
         if(abs(pdg) == 12) {
           fXSecGenStr += "e_";
         }
@@ -685,8 +729,8 @@ namespace flxrd
     }
     if(!valid_input) { // Check for valid neutrino pdg. If invalid, show user list before quitting
       std::cout << "Invalid neutrino. Please input one of the following:" << std::endl;
-      for(unsigned int i = 0, n = kNuPDG.size(); i < n; ++i) {
-        std::cout << kNuPDG[i] << std::endl;
+      for(const auto& allowedPDG : kNuPDG) {
+        std::cout << allowedPDG << std::endl;
       }
     }
     assert(valid_input);
@@ -696,8 +740,8 @@ namespace flxrd
       fXSecGenStr += "bar_"; // Add if necessary to directory string
     }
 
-    for(unsigned int i = 0, n = kTarget.size(); i < n; ++i) {
-      if(tar == kTarget[i]) { // Last component of directory string is target.
+    for(const auto& allowedTar : kTarget) {
+      if(tar == allowedTar) { // Last component of directory string is target.
         if(tar == "H")  { 
           fXSecGenStr += "H1/";
         }
@@ -728,21 +772,30 @@ namespace flxrd
     }
     if(!valid_input) { // Check for valid target. If invalid, show user list before quitting
       std::cout << "Invalid target. Please input one of the following:" << std::endl;
-      for(unsigned int i = 0, n = kTarget.size(); i < n; ++i) {
-        std::cout << kTarget[i] << std::endl;
+      for(const auto& allowedTar : kTarget) {
+        std::cout << allowedTar << std::endl;
       }
     }
     assert(valid_input);
     valid_input = false;
 
-    for(unsigned int i = 0, n = kIntType.size(); i < n; ++i) {
-      if(type == kIntType[i]) { // After directory, add the interaction type
+    for(const auto& allowedType : kIntType) {
+      if(type == allowedType) { // After directory, add the interaction type
+        // If the requested cross section is scattering off of electrons,
+        // make sure the the appropriate process is used based on the neutrino flavor
+        NuElectronCheck(type, pdg, true);
+
         fXSecGenStr += type;
         valid_input = true;
+
+        // End the loop now to avoid double checking the type if it was altered by NuElectronCheck
+        if(valid_input) {
+          break;
+        }
       }
     }
     if(!valid_input) { // Check for valid interaction type. If invalid, give user advice before quitting
-      std::cout << "Invalid interaction type. Please input one of the following:" << std::endl;
+      std::cout << "Invalid interaction type." << std::endl;
       std::cout << "For the most general CC or NC, input tot_cc or tot_nc, respectively." << std::endl;
       std::cout << "For a full list of all the inputs, call the function ListIntTypes()." << std::endl;
     }
