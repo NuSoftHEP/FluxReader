@@ -53,6 +53,9 @@ namespace flxrd
     /// Get the number of times to use a neutrino ray in the detector
     int GetUses() const { return fUses; }
 
+    /// Print the detector name, target, coordinates, size, and number of uses
+    void PrintAll() const;
+
     /// Set the number fo times to use a neutrino ray in the detector
     void SetUses(int nuses) { fUses = nuses; }
 

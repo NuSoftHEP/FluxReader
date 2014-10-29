@@ -1,5 +1,8 @@
 #include "Detector.h"
 
+// C/C++ Includes
+#include <iostream>
+
 namespace flxrd
 {
   //---------------------------------------------------------------------------
@@ -74,5 +77,19 @@ namespace flxrd
   TVector3 Detector::GetTCoords() const
   {
     return TVector3(fCoord[0], fCoord[1], fCoord[2]);
+  }
+
+  //---------------------------------------------------------------------------
+  void Detector::PrintAll() const
+  {
+    std::cout << "--------------------" << std::endl
+              << "Detector name: "  << fDetName << std::endl
+              << "Nuclear target: " << fTarget  << std::endl
+              << "Coordinates: (" << fCoord[0] << ", " << fCoord[1] << ", " << fCoord[2] << ")" << std::endl
+              << "Size: ("        << fSize[0]  << ", " << fSize[1]  << ", " << fSize[2]  << ")" << std::endl
+              << "Number of times to smear neutrino rays through detector: " << fUses << std::endl
+              << "--------------------" << std::endl;
+
+    return;
   }
 }
