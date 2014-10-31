@@ -18,6 +18,17 @@ namespace flxrd
   XSec::XSec()
   {
     SetXSecFileName(); // Initialize the file name
+
+    // Source: http://www.chemeddl.org/resources/ptl/index.php
+    fTarget["H"]   = 1.008;
+    fTarget["C"]   = 12.011;
+    fTarget["N"]   = 14.007;
+    fTarget["O"]   = 15.999;
+    fTarget["S"]   = 32.065;
+    fTarget["Cl"]  = 35.453;
+    fTarget["Ti"]  = 47.867;
+    fTarget["Fe"]  = 55.845;
+    fTarget["CH2"] = 14.027;
   }
 
   //----------------------------------------------------------------------
@@ -26,64 +37,7 @@ namespace flxrd
   }
 
   //----------------------------------------------------------------------
-  void XSec::SetXSecFileName(std::string override)
-  {
-    if(!override.compare("You_really_should_not_override_if_possible")) { // This is the default
-      // This environment variable points to the folder with the most current version of the Genie cross sections
-      fXSecFileName = std::getenv("GENIEXSECPATH");
-
-      fXSecFileName += "/xsec_graphs_*_*.root"; // General format of the cross section filename
-      std::vector<std::string> files = Wildcard(fXSecFileName); // Get a list of all files matching the wildcard
-
-      if(files.size() >= 1) {
-        fXSecFileName = files[0]; // Set the string to the first file in the list
-
-        if(files.size() > 1) { // Show user all files if more than one appears
-          std::cout << "More than one file was found." << std::endl; 
-          for(const auto& fileName : files) {
-            std::cout << fileName << std::endl;
-          }
-        }
-      }
-      else {
-        std::cout << "No file could be found matching " << fXSecFileName << std::endl;
-      }
-
-      assert(files.size() >= 1); // Make sure a file was found
-    }
-    else { // Warn the user about what he/she is doing.
-      std::cout << "Warning: you are attempting to override the default file name." << std::endl;
-      std::cout << "Please make sure you have a good reason for doing so!" << std::endl;
-      std::cout << "The only error check that will be performed on your input" << std::endl;
-      std::cout << "is whether it has a .root extension. Otherwise, you're on your own." << std::endl;
-
-      std::string rootextension = override; // Check that the override string has .root at its end
-      rootextension.erase(0, rootextension.size()-5);
-      
-      if(rootextension != ".root") { // Abort if .root is not at the end of the string
-        std::cout << std::endl;
-        std::cout << "This override file does not have a .root extension." << std::endl;
-      }
-      assert(rootextension == ".root");
-      
-      fXSecFileName = override;
-    }
-
-    return;
-  }
-
-  //----------------------------------------------------------------------
-  void XSec::ListIntTypes()
-  {
-    for(const auto& allowedType : kIntType) {
-      std::cout << allowedType << std::endl;
-    }
-
-    return;
-  }
-
-  //----------------------------------------------------------------------
-  TGraph* XSec::GetGraph(int pdg, std::string tar, std::string type)
+  TGraph* XSec::GetGraph(int pdg, std::string tar, std::string type, bool eventRate)
   {
     TGraph* gRet = new TGraph();
 
@@ -109,9 +63,22 @@ namespace flxrd
       f->Close(); // Close the file
     }
 
+    // If this cross section is for an event rate, scale the y values appropriately
+    if(eventRate) {
+      // Avogadro's Number * 10^-38 cm^2 * 10^9 g/kton / Molar Mass
+      double scale = 0.0000060221413/fTarget[tar]; // Units: cm^2/kton
+
+      // Scale each y value
+      double x = 0., y = 0.;
+      for(int i = 0, n = gRet->GetN(); i < n; ++i) {
+        gRet->GetPoint(i, x, y);
+        gRet->SetPoint(i, x, y*scale);
+      }
+    }
+
     // Set the graph title and axis labels
-    std::string histTitle = MakeXSecTitle(pdg, tar, typeCopy);
-    histTitle += ";Energy (GeV);10^{-38} cm^{2}";
+    std::string histTitle = MakeXSecTitle(pdg, tar, typeCopy) + ";Energy (GeV);";
+    histTitle += (eventRate ? "cm^{2}/kton" : "10^{-38} cm^{2}"); // Add the appropriate y label
     gRet->SetTitle(histTitle.c_str());
 
     return gRet;
@@ -119,10 +86,11 @@ namespace flxrd
 
   //----------------------------------------------------------------------
   TGraph* XSec::GetGraphRatio(int pdg1, std::string tar1, std::string type1,
-                              int pdg2, std::string tar2, std::string type2)
+                              int pdg2, std::string tar2, std::string type2,
+                              bool eventRate)
   {
-    TGraph* g1 = GetGraph(pdg1, tar1, type1); // Pull numerator graph
-    TGraph* g2 = GetGraph(pdg2, tar2, type2); // Pull denominator graph
+    TGraph* g1 = GetGraph(pdg1, tar1, type1); // Pull numerator graph with no scaling
+    TGraph* g2 = GetGraph(pdg2, tar2, type2); // Pull denominator graph with no scaling
 
     // Make sure both graphs have the same number of points, and store that number
     // We could (should?) also check that x(g1) == x(g2), but this is currently not done
@@ -132,13 +100,19 @@ namespace flxrd
     // Arrays to store the TGraph points
     double x[n], y1[n], y2[n], yRet[n];
 
+    // For ratios, the scale for event rates is just the inverse ratio of the two molar masses
+    double eventRateScale = 1.;
+    if(eventRate) {
+      eventRateScale = fTarget[tar2]/fTarget[tar1];
+    }
+
     for(int i = 0; i < n; ++i) {
       // Get each of the points
       g1->GetPoint(i, x[i], y1[i]);
       g2->GetPoint(i, x[i], y2[i]);
 
       if(y2[i] != 0) {
-        yRet[i] = y1[i]/y2[i];
+        yRet[i] = eventRateScale*y1[i]/y2[i];
       }
       else {
         yRet[i] = 0;
@@ -166,23 +140,14 @@ namespace flxrd
   }
 
   //----------------------------------------------------------------------
-  double XSec::XSecEval(TSpline3* s, double x)
-  {
-    double xsec = (s->Eval(x) > 0) ? s->Eval(x) : 0;
-    return xsec;
-  }
-
-  //----------------------------------------------------------------------
   TSpline3* XSec::GetXSec(int pdg, std::string tar, std::string type,
-                          const char* opt, double begin_val)
+                          bool eventRate, const char* opt, double begin_val)
   {
-    TGraph* g = GetGraph(pdg, tar, type); // Get the graph to generate the spline
+    TGraph* g = GetGraph(pdg, tar, type, eventRate); // Get the graph to generate the spline
 
     TSpline3* s = new TSpline3("", g, opt, begin_val); // Generate spline
 
-    std::string histTitle = g->GetTitle();
-    histTitle += ";Energy (GeV);10^{-38} cm^{2}";
-    s->SetTitle(histTitle.c_str());
+    s->SetTitle(g->GetTitle()); // This should pick up the actual title and axes labels
 
     return s;
   }
@@ -190,16 +155,15 @@ namespace flxrd
   //----------------------------------------------------------------------
   TSpline3* XSec::GetXSecRatio(int pdg1, std::string tar1, std::string type1,
                                int pdg2, std::string tar2, std::string type2,
-                               const char* opt, double begin_val)
+                               bool eventRate, const char* opt, double begin_val)
   {
     TGraph* g = GetGraphRatio(pdg1, tar1, type1,
-                              pdg2, tar2, type2); // Get the graph to generate the spline
+                              pdg2, tar2, type2,
+                              eventRate); // Get the graph to generate the spline
 
     TSpline3* s = new TSpline3("", g, opt, begin_val); // Generate spline
 
-    std::string histTitle = g->GetTitle();
-    histTitle += ";Energy (GeV);";
-    s->SetTitle(histTitle.c_str());
+    s->SetTitle(g->GetTitle()); // This should pick up the actual title and axes labels
 
     return s;
   }
@@ -261,7 +225,7 @@ namespace flxrd
     // This function is similar to the equally spaced bins version above
     // See its comments for more details
 
-    TH1* ret =  new TH1D("",";Energy (GeV);10^{-38} cm^{2}", nbins, edges);
+    TH1* ret =  new TH1D("",";Energy (GeV);", nbins, edges);
 
     TAxis* ax = ret->GetXaxis();
 
@@ -305,6 +269,80 @@ namespace flxrd
 
     ret->SetTitle(s->GetTitle()); // This should pick up the actual title and y axis label (if applicable)
     return ret;
+  }
+
+  //----------------------------------------------------------------------
+  bool XSec::IsValidProcess(std::string type) const
+  {
+    for(const auto& allowedType : fIntType) {
+      if(!type.compare(allowedType)) { return true; }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------------
+  void XSec::ListIntTypes()
+  {
+    for(const auto& allowedType : fIntType) {
+      std::cout << allowedType << std::endl;
+    }
+
+    return;
+  }
+
+  //----------------------------------------------------------------------
+  void XSec::SetXSecFileName(std::string override)
+  {
+    if(!override.compare("You_really_should_not_override_if_possible")) { // This is the default
+      // This environment variable points to the folder with the most current version of the Genie cross sections
+      fXSecFileName = std::getenv("GENIEXSECPATH");
+
+      fXSecFileName += "/xsec_graphs_*_*.root"; // General format of the cross section filename
+      std::vector<std::string> files = Wildcard(fXSecFileName); // Get a list of all files matching the wildcard
+
+      if(files.size() >= 1) {
+        fXSecFileName = files[0]; // Set the string to the first file in the list
+
+        if(files.size() > 1) { // Show user all files if more than one appears
+          std::cout << "More than one file was found." << std::endl; 
+          for(const auto& fileName : files) {
+            std::cout << fileName << std::endl;
+          }
+        }
+      }
+      else {
+        std::cout << "No file could be found matching " << fXSecFileName << std::endl;
+      }
+
+      assert(files.size() >= 1); // Make sure a file was found
+    }
+    else { // Warn the user about what he/she is doing.
+      std::cout << "Warning: you are attempting to override the default file name." << std::endl;
+      std::cout << "Please make sure you have a good reason for doing so!" << std::endl;
+      std::cout << "The only error check that will be performed on your input" << std::endl;
+      std::cout << "is whether it has a .root extension. Otherwise, you're on your own." << std::endl;
+
+      std::string rootextension = override; // Check that the override string has .root at its end
+      rootextension.erase(0, rootextension.size()-5);
+      
+      if(rootextension != ".root") { // Abort if .root is not at the end of the string
+        std::cout << std::endl;
+        std::cout << "This override file does not have a .root extension." << std::endl;
+      }
+      assert(rootextension == ".root");
+      
+      fXSecFileName = override;
+    }
+
+    return;
+  }
+
+  //----------------------------------------------------------------------
+  double XSec::XSecEval(TSpline3* s, double x)
+  {
+    double xsec = (s->Eval(x) > 0) ? s->Eval(x) : 0;
+    return xsec;
   }
 
   //----------------------------------------------------------------------
@@ -712,8 +750,9 @@ namespace flxrd
     bool valid_input = false;
     fXSecGenStr = "nu_"; // All directories in the cross section file begin with this string
 
-    for(const auto& allowedPDG : kNuPDG) {
-      if(pdg == allowedPDG) { // Next component in the directory string is the neutrino type
+    // Next component in the directory string is the neutrino type
+    for(const auto& allowedPDG : fNuPDG) {
+      if(pdg == allowedPDG) {
         if(abs(pdg) == 12) {
           fXSecGenStr += "e_";
         }
@@ -729,7 +768,7 @@ namespace flxrd
     }
     if(!valid_input) { // Check for valid neutrino pdg. If invalid, show user list before quitting
       std::cout << "Invalid neutrino. Please input one of the following:" << std::endl;
-      for(const auto& allowedPDG : kNuPDG) {
+      for(const auto& allowedPDG : fNuPDG) {
         std::cout << allowedPDG << std::endl;
       }
     }
@@ -740,30 +779,31 @@ namespace flxrd
       fXSecGenStr += "bar_"; // Add if necessary to directory string
     }
 
-    for(const auto& allowedTar : kTarget) {
-      if(tar == allowedTar) { // Last component of directory string is target.
-        if(tar == "H")  { 
+    // Last component of directory string is target
+    for(const auto& allowedTar : fTarget) {
+      if(!tar.compare(allowedTar.first)) {
+        if     (!tar.compare("H"))  { 
           fXSecGenStr += "H1/";
         }
-        if(tar == "C")  { 
+        else if(!tar.compare("C"))  { 
           fXSecGenStr += "C12/";
         }
-        if(tar == "N")  { 
+        else if(!tar.compare("N"))  { 
           fXSecGenStr += "N14/";
         }
-        if(tar == "O")  { 
+        else if(!tar.compare("O"))  { 
           fXSecGenStr += "O16/";
         }
-        if(tar == "S")  { 
+        else if(!tar.compare("S"))  { 
           fXSecGenStr += "S32/";
         }
-        if(tar == "Cl") {
+        else if(!tar.compare("Cl")) {
           fXSecGenStr += "Cl35/";
         }
-        if(tar == "Ti") {
+        else if(!tar.compare("Ti")) {
           fXSecGenStr += "Ti48/";
         }
-        if(tar == "Fe") {
+        else if(!tar.compare("Fe")) {
           fXSecGenStr += "Fe56/";
         }
 
@@ -772,14 +812,14 @@ namespace flxrd
     }
     if(!valid_input) { // Check for valid target. If invalid, show user list before quitting
       std::cout << "Invalid target. Please input one of the following:" << std::endl;
-      for(const auto& allowedTar : kTarget) {
-        std::cout << allowedTar << std::endl;
+      for(const auto& allowedTar : fTarget) {
+        std::cout << allowedTar.first << std::endl;
       }
     }
     assert(valid_input);
     valid_input = false;
 
-    for(const auto& allowedType : kIntType) {
+    for(const auto& allowedType : fIntType) {
       if(type == allowedType) { // After directory, add the interaction type
         // If the requested cross section is scattering off of electrons,
         // make sure the the appropriate process is used based on the neutrino flavor

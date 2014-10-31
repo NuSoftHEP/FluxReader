@@ -126,7 +126,7 @@ namespace flxrd
   {
     // Check that the cross section does not already exist
     for(unsigned int i_xsec = 0, n_xsec = fXSec.size(); i_xsec < n_xsec; ++i_xsec) {
-      if(strcmp(xsec.c_str(), fXSec[i_xsec].c_str()) == 0) {
+      if(!xsec.compare(fXSec[i_xsec])) {
         std::cout << "This cross section is already included." << std::endl;
         return;
       }
@@ -134,22 +134,9 @@ namespace flxrd
 
     // Create XSec object to get a list of valid cross sections
     XSec* xs = new XSec();
-    const int n_str = xs->kIntType.size(); // Number of valid cross sections
-
-    int i_str = 0;
-    bool notfound = true;
-
-    while(notfound && i_str < n_str) {
-      // Check whether the input cross section matches one of the valid XSec types
-      if(strcmp(xsec.c_str(), xs->kIntType[i_str].c_str()) == 0) {
-        notfound = false;
-      }
-
-      ++i_str;
-    }
 
     // If the cross section was invalid, show the user a list of valid inputs, clean up, and return
-    if(notfound && xsec.compare("NoXSec")) {
+    if(!xs->IsValidProcess(xsec) && xsec.compare("NoXSec")) {
       std::cout << "The input cross section is not valid. The following are valid:" << std::endl;
       xs->ListIntTypes();
       delete xs;
