@@ -17,7 +17,7 @@ namespace flxrd
   // The detector name in the first constructor argument can be anything
 
   // MicroBooNE
-  static Detector kMicroBooNE("MicroBooNE", "CH2",
+  static Detector kMicroBooNE("MicroBooNE", "Ar",
                               LoadDetCoords("MicroBooNE"),
                               {0., 0., 0.},
                               1);
@@ -35,13 +35,13 @@ namespace flxrd
                              1);
 
   // MINOS Near Detector
-  static Detector kMINOS_ND("MINOS-ND", "CH2",
+  static Detector kMINOS_ND("MINOS-ND", "Fe",
                             LoadDetCoords("MINOS NearDet"),
                             {100., 100., 500.},
                             1);
 
   // MINOS Far Detector
-  static Detector kMINOS_FD("MINOS-FD", "CH2",
+  static Detector kMINOS_FD("MINOS-FD", "Fe",
                             LoadDetCoords("MINOS FarDet"),
                             {374., 374., 2800.},
                             1);

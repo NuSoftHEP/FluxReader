@@ -63,7 +63,12 @@ namespace flxrd
 
     std::set<std::string> fBranches; ///< List of flux file branches needed to be activated
 
-    const double fDefaultWeightCorrection = 1./(10000. * M_PI);
+    /// Without applying corrections, the output of the flux files appears to be:
+    /// Number of neutrinos or events in a circle of 1m radius
+    /// To get neutrinos or events per cm^2, need to divide by pi*(100 cm)^2
+    /// (Multiplying by a cross section made for an event rate changes the units:
+    ///  neutrinos/cm^2 -> events/kton)
+    const double fDefaultWeightCorrection = 1./(10000. * M_PI); ///< Standard correction value to apply to default weights
 
     TObject* fExtWeights; ///< External weights to be applied to histogram entries
 

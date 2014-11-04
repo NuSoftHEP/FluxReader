@@ -26,6 +26,7 @@ namespace flxrd
     fTarget["O"]   = 15.999;
     fTarget["S"]   = 32.065;
     fTarget["Cl"]  = 35.453;
+    fTarget["Ar"]  = 39.948;
     fTarget["Ti"]  = 47.867;
     fTarget["Fe"]  = 55.845;
     fTarget["CH2"] = 14.027;
@@ -414,6 +415,9 @@ namespace flxrd
     if(tar == "Cl")  {
       title += "^{35}Cl";
     }
+    if(tar == "Ar")  {
+      title += "^{40}Ar";
+    }
     if(tar == "Ti")  {
       title += "^{48}Ti";
     }
@@ -495,6 +499,9 @@ namespace flxrd
       if(tar1 == "Cl")  {
         title += "^{35}Cl";
       }
+      if(tar1 == "Ar")  {
+        title += "^{40}Ar";
+      }
       if(tar1 == "Ti")  {
         title += "^{48}Ti";
       }
@@ -548,6 +555,9 @@ namespace flxrd
       if(tar1 == "Cl")  {
         title += "^{35}Cl";
       }
+      if(tar1 == "Ar")  {
+        title += "^{40}Ar";
+      }
       if(tar1 == "Ti")  {
         title += "^{48}Ti";
       }
@@ -587,6 +597,9 @@ namespace flxrd
       }
       if(tar2 == "Cl")  {
         title += "^{35}Cl";
+      }
+      if(tar2 == "Ar")  {
+        title += "^{40}Ar";
       }
       if(tar2 == "Ti")  {
         title += "^{48}Ti";
@@ -641,6 +654,9 @@ namespace flxrd
       if(tar1 == "Cl")  {
         title += "^{35}Cl";
       }
+      if(tar1 == "Ar")  {
+        title += "^{40}Ar";
+      }
       if(tar1 == "Ti")  {
         title += "^{48}Ti";
       }
@@ -693,6 +709,9 @@ namespace flxrd
       }
       if(tar2 == "Cl")  {
         title += "^{35}Cl";
+      }
+      if(tar2 == "Ar")  {
+        title += "^{40}Ar";
       }
       if(tar2 == "Ti")  {
         title += "^{48}Ti";
@@ -799,6 +818,9 @@ namespace flxrd
         }
         else if(!tar.compare("Cl")) {
           fXSecGenStr += "Cl35/";
+        }
+        else if(!tar.compare("Ar")) {
+          fXSecGenStr += "Ar40/";
         }
         else if(!tar.compare("Ti")) {
           fXSecGenStr += "Ti48/";
