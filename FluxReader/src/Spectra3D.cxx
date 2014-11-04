@@ -69,7 +69,8 @@ namespace flxrd
 
         for(int i_nuray = first_nuray; i_nuray < last_nuray; ++i_nuray) {
           double weight =   nu->decay.nimpwt * nu->nuray[i_nuray].wgt
-                          * fXSecSplines[XSecName()]->Eval(nu->nuray[i_nuray].E);
+                          * fXSecSplines[XSecName()]->Eval(nu->nuray[i_nuray].E)
+                          * fDefaultWeightCorrection;
 
           fHists[i_hist]->Fill(fVarX(nu, i_nuray), fVarY(nu, i_nuray), fVarZ(nu, i_nuray), fWei(weight, nu, i_nuray, fExtWeights));
         } // Loop over uses

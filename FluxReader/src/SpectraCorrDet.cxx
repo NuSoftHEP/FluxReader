@@ -96,12 +96,14 @@ namespace flxrd
       for(int i_nuray_x = first_nuray_x; i_nuray_x < last_nuray_x; ++i_nuray_x) {
         // Calculate the standard weight at the x axis detector
         double weight_x =   nu->decay.nimpwt * nu->nuray[i_nuray_x].wgt
-                            * fXSecSplines[XSecName()]->Eval(nu->nuray[i_nuray_x].E);
+                          * fXSecSplines[XSecName()]->Eval(nu->nuray[i_nuray_x].E)
+                          * fDefaultWeightCorrection;
 
         for(int i_nuray_y = first_nuray_y; i_nuray_y < last_nuray_y; ++i_nuray_y) {
           // Calculate the standard weight at the y axis detector
           double weight_y =   nu->decay.nimpwt * nu->nuray[i_nuray_y].wgt
-                            * fXSecSplines[XSecName()]->Eval(nu->nuray[i_nuray_y].E);
+                            * fXSecSplines[XSecName()]->Eval(nu->nuray[i_nuray_y].E)
+                            * fDefaultWeightCorrection;
 
           // Evaluate the variables and weights, fill the histograms
           // Both axes variables evaluate fVarX, but the x axis is evaluated at detX, and the y axis at detY

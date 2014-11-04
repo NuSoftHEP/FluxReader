@@ -70,7 +70,7 @@ namespace flxrd
         std::string curr = fParams.GetXSecName(fParams.GetCurrentXSec());
 
         if(curr.compare("NoXSec")) { // The comparison returns 0 if the two strings match...
-          fXSecSplines[xsecname] = xsec->GetXSec(pdg, tar, curr); // Create and store the spline
+          fXSecSplines[xsecname] = xsec->GetXSec(pdg, tar, curr, true); // Create and store the spline
         }
         else {
           // For NoXSec, or no cross section, create a line at 1

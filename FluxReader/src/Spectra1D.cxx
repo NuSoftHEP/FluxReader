@@ -66,7 +66,8 @@ namespace flxrd
         for(int i_nuray = first_nuray; i_nuray < last_nuray; ++i_nuray) {
           // Calculate the standard weight
           double weight =   nu->decay.nimpwt * nu->nuray[i_nuray].wgt
-                          * fXSecSplines[XSecName()]->Eval(nu->nuray[i_nuray].E);
+                          * fXSecSplines[XSecName()]->Eval(nu->nuray[i_nuray].E)
+                          * fDefaultWeightCorrection;
 
           // Evaluate the variable and weight, fill the histogram
           fHists[i_hist]->Fill(fVarX(nu, i_nuray), fWei(weight, nu, i_nuray, fExtWeights));

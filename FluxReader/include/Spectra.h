@@ -1,6 +1,7 @@
 #pragma once
 
 // C/C++ Includes
+#include <cmath>
 #include <map>
 #include <set>
 #include <string>
@@ -61,6 +62,8 @@ namespace flxrd
     std::string XSecName();
 
     std::set<std::string> fBranches; ///< List of flux file branches needed to be activated
+
+    const double fDefaultWeightCorrection = 1./(10000. * M_PI);
 
     TObject* fExtWeights; ///< External weights to be applied to histogram entries
 
