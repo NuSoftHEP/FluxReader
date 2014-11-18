@@ -60,4 +60,18 @@ namespace flxrd
   const Var kpz({"decay", "decay.pdpz"},
                 [](const bsim::Dk2Nu* nu, const int&)
                 { return nu->decay.pdpz; });
+
+  // Momentum of neutrino ancestor (not necessarily parent) transverse to beam direction,
+  // as it leaves the NuMI Target
+  const Var kTargetExitpT({"tgtexit", "tgtexit.tpx", "tgtexit.tpy"},
+                          [](const bsim::Dk2Nu* nu, const int&)
+                          { double px = nu->tgtexit.tpx;
+                          double py = nu->tgtexit.tpy;
+                          return sqrt(px*px + py*py); });
+
+  // Momentum of neutrino ancestor (not necessarily parent) along beam direction,
+  // as it leaves the NuMI Target
+  const Var kTargetExitpz({"tgtexit", "tgtexit.tpz"},
+                          [](const bsim::Dk2Nu* nu, const int&)
+                          { return nu->tgtexit.tpz; });
 }
