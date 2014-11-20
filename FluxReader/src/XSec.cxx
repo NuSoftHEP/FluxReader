@@ -7,7 +7,12 @@
 
 // Root Includes
 #include "TAxis.h"
+#include "TDirectory.h"
 #include "TFile.h"
+#include "TGraph.h"
+#include "TH1.h"
+#include "TKey.h"
+#include "TSpline.h"
 
 // Package Includes
 #include "Utilities.h"
@@ -17,24 +22,29 @@ namespace flxrd
   //----------------------------------------------------------------------
   XSec::XSec()
   {
-    SetXSecFileName(); // Initialize the file name
+    fLocalDir = gDirectory;
+    fXSecFile = new TFile();
+
+    SetXSecFile(); // Initialize the file
 
     // Source: http://www.chemeddl.org/resources/ptl/index.php
-    fTarget["H"]   = 1.008;
-    fTarget["C"]   = 12.011;
-    fTarget["N"]   = 14.007;
-    fTarget["O"]   = 15.999;
-    fTarget["S"]   = 32.065;
-    fTarget["Cl"]  = 35.453;
-    fTarget["Ar"]  = 39.948;
-    fTarget["Ti"]  = 47.867;
-    fTarget["Fe"]  = 55.845;
-    fTarget["CH2"] = 14.027;
+    fMolarMass["H"]  = 1.008;
+    fMolarMass["C"]  = 12.011;
+    fMolarMass["N"]  = 14.007;
+    fMolarMass["O"]  = 15.999;
+    fMolarMass["S"]  = 32.065;
+    fMolarMass["Cl"] = 35.453;
+    fMolarMass["Ar"] = 39.948;
+    fMolarMass["Ti"] = 47.867;
+    fMolarMass["Fe"] = 55.845;
   }
 
   //----------------------------------------------------------------------
   XSec::~XSec()
   {
+    if(fXSecFile->IsOpen()) {
+      fXSecFile->Close();
+    }
   }
 
   //----------------------------------------------------------------------
@@ -46,28 +56,22 @@ namespace flxrd
     std::string typeCopy(type);
 
     // Check for necessary recursion combinations
-    // If target is CH2, need to add graphs from C and 2 H's
-    if(tar == "CH2") {
-      gRet = GetGraphMath(GetGraph(pdg, "C", type), 1,
-                          GetGraph(pdg, "H", type), 2);
+    // If target is a compound, need to add relevant graphs
+    if(fTarget.find(tar) == fTarget.end()) {
+      gRet = GetGraphCompound(tar, pdg, type);
     }
     else { // Base TGraph pulling scheme
       // Create the string pointing to the correct cross section directory
       SetXSecGenStr(pdg, tar, typeCopy);
 
-      // Open the cross section file
-      TFile* f = new TFile( (GetXSecFileName()).c_str() );
-
       // Pull the cross section
-      gRet = (TGraph*)f->Get( (GetXSecGenStr()).c_str() );
-
-      f->Close(); // Close the file
+      gRet = (TGraph*)fXSecFile->Get(GetXSecGenStr().c_str());
     }
 
     // If this cross section is for an event rate, scale the y values appropriately
     if(eventRate) {
       // Avogadro's Number * 10^-38 cm^2 * 10^9 g/kton / Molar Mass
-      double scale = 0.0000060221413/fTarget[tar]; // Units: cm^2/kton
+      double scale = 0.0000060221413/fMolarMass[tar]; // Units: cm^2/kton
 
       // Scale each y value
       double x = 0., y = 0.;
@@ -104,7 +108,7 @@ namespace flxrd
     // For ratios, the scale for event rates is just the inverse ratio of the two molar masses
     double eventRateScale = 1.;
     if(eventRate) {
-      eventRateScale = fTarget[tar2]/fTarget[tar1];
+      eventRateScale = fMolarMass[tar2]/fMolarMass[tar1];
     }
 
     for(int i = 0; i < n; ++i) {
@@ -116,11 +120,11 @@ namespace flxrd
         yRet[i] = eventRateScale*y1[i]/y2[i];
       }
       else {
-        yRet[i] = 0;
+        yRet[i] = 0.;
       }
 
-      if( !(yRet[i] > 0 && yRet[i] < 1000000000) ) { // Hack to make sure no NaN or Inf appear
-        yRet[i] = 0;
+      if( !(yRet[i] > 0. && yRet[i] < 1000000000.) ) { // Hack to make sure no NaN or Inf appear
+        yRet[i] = 0.;
       }
     }
 
@@ -172,12 +176,12 @@ namespace flxrd
   //----------------------------------------------------------------------
   TH1* XSec::GetHist(TSpline3* s, int nbins, double xmin, double xmax)
   {
-    TH1* ret =  new TH1D("",";Energy (GeV);", nbins, xmin, xmax);
+    TH1* ret = new TH1D("", "", nbins, xmin, xmax);
 
     TAxis* ax = ret->GetXaxis();
 
-    double bin_val = 0; // This value will be assigned to a histogram bin 
-    double delta_x = (xmax-xmin)/(10*nbins); // Width of (most) discrete integral trapezoids
+    double bin_val = 0.; // This value will be assigned to a histogram bin 
+    double delta_x = (xmax - xmin)/(10.*(double)nbins); // Width of (most) discrete integral trapezoids
     if(delta_x > 0.1) { // Max width of discrete integral trapezoids
       delta_x = 0.1;
     }
@@ -188,7 +192,7 @@ namespace flxrd
       // Integral I(f(x), a, b) = delta_x * { [f(0) + f(N)]/2 + f(1) + f(2) + ... f(N-1) }, x(0) = a, x(N) = b
       if(delta_x < 0.1) { // Calculate discrete integral breaking up bin into 10 equal parts
         for(int i_x = 1; i_x < 10; i_x++) {
-          bin_val += XSecEval(s, (ax->GetBinLowEdge(i) + i_x*delta_x) ); // Adding f(1) through f(N-1)
+          bin_val += XSecEval(s, ax->GetBinLowEdge(i) + i_x*delta_x); // Adding f(1) through f(N-1)
         }
 
         bin_val += 0.5*( XSecEval(s, ax->GetBinLowEdge(i)) + XSecEval(s, ax->GetBinUpEdge(i)) ); // Add [f(0) and f(N)]/2
@@ -203,11 +207,11 @@ namespace flxrd
           bin_val += s->Eval(ax->GetBinLowEdge(i) + i_x*delta_x);
         }
 
-        bin_val += 0.5*( XSecEval(s, ax->GetBinLowEdge(i)) + XSecEval(s, max_loop_x) );
+        bin_val += 0.5*(XSecEval(s, ax->GetBinLowEdge(i)) + XSecEval(s, max_loop_x));
         bin_val *= delta_x;
 
         bin_val += 0.5*(ax->GetBinUpEdge(i) - max_loop_x)
-                      *( XSecEval(s, max_loop_x) + XSecEval(s, ax->GetBinUpEdge(i)) );
+                      *(XSecEval(s, max_loop_x) + XSecEval(s, ax->GetBinUpEdge(i)));
 
         bin_val /= (ax->GetBinUpEdge(i) - ax->GetBinLowEdge(i));
       }
@@ -226,22 +230,22 @@ namespace flxrd
     // This function is similar to the equally spaced bins version above
     // See its comments for more details
 
-    TH1* ret =  new TH1D("",";Energy (GeV);", nbins, edges);
+    TH1* ret = new TH1D("", "", nbins, edges);
 
     TAxis* ax = ret->GetXaxis();
 
-    double bin_val = 0;
-    double delta_x = 0.1; 
+    double bin_val = 0.;
+    double delta_x = 0.1;
 
     for(int i = 1; i <= nbins; ++i) {
-      delta_x = (ax->GetBinUpEdge(i) - ax->GetBinLowEdge(i))/10;
+      delta_x = (ax->GetBinUpEdge(i) - ax->GetBinLowEdge(i))/10.;
 
       if(delta_x < 0.1) {
         for(int i_x = 1; i_x < 10; i_x++) {
           bin_val += XSecEval(s, (ax->GetBinLowEdge(i) + i_x*delta_x) );
         }
 
-        bin_val += 0.5*( XSecEval(s, ax->GetBinLowEdge(i)) + XSecEval(s, ax->GetBinUpEdge(i)) );
+        bin_val += 0.5*(XSecEval(s, ax->GetBinLowEdge(i)) + XSecEval(s, ax->GetBinUpEdge(i)));
         bin_val *= delta_x;
         bin_val /= ax->GetBinUpEdge(i) - ax->GetBinLowEdge(i);
       }
@@ -249,23 +253,23 @@ namespace flxrd
         delta_x = 0.1;
 
         int num_eval_pts = (ax->GetBinUpEdge(i) - ax->GetBinLowEdge(i))*10;
-        double max_loop_x   = ax->GetBinLowEdge(i) + num_eval_pts*delta_x;
+        double max_loop_x = ax->GetBinLowEdge(i) + num_eval_pts*delta_x;
 
         for(int i_x = 1; i_x < num_eval_pts; i_x++) {
-          bin_val += XSecEval(s, (ax->GetBinLowEdge(i) + i_x*delta_x) );
+          bin_val += XSecEval(s, ax->GetBinLowEdge(i) + i_x*delta_x);
         }
 
-        bin_val += 0.5*( XSecEval(s, ax->GetBinLowEdge(i)) + XSecEval(s, max_loop_x) );
+        bin_val += 0.5*(XSecEval(s, ax->GetBinLowEdge(i)) + XSecEval(s, max_loop_x));
         bin_val *= delta_x;
 
         bin_val += 0.5*(ax->GetBinUpEdge(i) - max_loop_x)
-                      *( XSecEval(s, max_loop_x) + XSecEval(s, ax->GetBinUpEdge(i)) );
+                      *(XSecEval(s, max_loop_x) + XSecEval(s, ax->GetBinUpEdge(i)));
 
         bin_val /= ax->GetBinUpEdge(i) - ax->GetBinLowEdge(i);
       }
 
       ret->SetBinContent(i, bin_val);
-      bin_val = 0;
+      bin_val = 0.;
     } // Loop over histogram bins
 
     ret->SetTitle(s->GetTitle()); // This should pick up the actual title and y axis label (if applicable)
@@ -283,7 +287,17 @@ namespace flxrd
   }
 
   //----------------------------------------------------------------------
-  void XSec::ListIntTypes()
+  void XSec::ListBaseTargets() const
+  {
+    for(const auto& allowedTar : fTarget) {
+      std::cout << allowedTar.first << std::endl;
+    }
+
+    return;
+  }
+
+  //----------------------------------------------------------------------
+  void XSec::ListIntTypes() const
   {
     for(const auto& allowedType : fIntType) {
       std::cout << allowedType << std::endl;
@@ -293,17 +307,43 @@ namespace flxrd
   }
 
   //----------------------------------------------------------------------
-  void XSec::SetXSecFileName(std::string override)
+  void XSec::ListMolarMasses() const
   {
+    for(const auto& molarMass : fMolarMass) {
+      std::cout << molarMass.first << ": " << molarMass.second << std::endl;
+    }
+
+    return;
+  }
+
+  //----------------------------------------------------------------------
+  void XSec::ListNuPDGs() const
+  {
+    for(const auto& allowedNu : fNuPDG) {
+      std::cout << allowedNu.first << std::endl;
+    }
+
+    return;
+  }
+
+  //----------------------------------------------------------------------
+  void XSec::SetXSecFile(std::string override)
+  {
+    if(fXSecFile->IsOpen()) {
+      fXSecFile->Close();
+    }
+
+    std::string xsecFileName;
+
     if(!override.compare("You_really_should_not_override_if_possible")) { // This is the default
       // This environment variable points to the folder with the most current version of the Genie cross sections
-      fXSecFileName = std::getenv("GENIEXSECPATH");
+      xsecFileName = std::getenv("GENIEXSECPATH");
 
-      fXSecFileName += "/xsec_graphs_*_*.root"; // General format of the cross section filename
-      std::vector<std::string> files = Wildcard(fXSecFileName); // Get a list of all files matching the wildcard
+      xsecFileName += "/xsec_graphs_*_*.root"; // General format of the cross section filename
+      std::vector<std::string> files = Wildcard(xsecFileName); // Get a list of all files matching the wildcard
 
       if(files.size() >= 1) {
-        fXSecFileName = files[0]; // Set the string to the first file in the list
+        xsecFileName = files[0]; // Set the string to the first file in the list
 
         if(files.size() > 1) { // Show user all files if more than one appears
           std::cout << "More than one file was found." << std::endl; 
@@ -313,7 +353,7 @@ namespace flxrd
         }
       }
       else {
-        std::cout << "No file could be found matching " << fXSecFileName << std::endl;
+        std::cout << "No file could be found matching " << xsecFileName << std::endl;
       }
 
       assert(files.size() >= 1); // Make sure a file was found
@@ -333,34 +373,183 @@ namespace flxrd
       }
       assert(rootextension == ".root");
       
-      fXSecFileName = override;
+      xsecFileName = override;
     }
 
+    fXSecFile = new TFile(xsecFileName.c_str(), "READ");
+    if(fXSecFile->IsOpen()) {
+      SetupValidInputs();
+    }
+    else {
+      std::cout << "Error: could not open file " << xsecFileName << "." << std::endl;
+    }
+
+    fLocalDir->cd();
     return;
   }
 
   //----------------------------------------------------------------------
   double XSec::XSecEval(TSpline3* s, double x)
   {
-    double xsec = (s->Eval(x) > 0) ? s->Eval(x) : 0;
+    double xsec = (s->Eval(x) > 0.) ? s->Eval(x) : 0.;
     return xsec;
   }
 
   //----------------------------------------------------------------------
-  TGraph* XSec::GetGraphMath(TGraph* g1, double c1, TGraph* g2, double c2)
+  void XSec::AddElementToCompoundMap(std::string tar, int number,
+                                     std::map<std::string, int>* map)
   {
-    assert(g1->GetN() == g2->GetN());
-    const int n = g1->GetN();
-    double x[n], y1[n], y2[n], yRet[n];
-
-    for(int i = 0; i < n; ++i) {
-      g1->GetPoint(i, x[i], y1[i]);
-      g2->GetPoint(i, x[i], y2[i]);
-
-      yRet[i] = c1*y1[i] + c2*y2[i];
+    // First check that the base target is valid
+    if(fTarget.find(tar) == fTarget.end()) {
+      std::cout << "Warning: " << tar << " is not a valid target." << std::endl
+                << "The compound must contain all valid targets." << std::endl
+                << "Doing nothing with this target." << std::endl;
+      return;
+    }
+    else { // The current target is valid...
+      // Check if the target already exists in the map
+      // Add the coefficient to the previous one if so
+      if(map->find(tar) != map->end()) {
+        map->at(tar) += number;
+        std::cout << "Warning: " << tar << " was found in the compound multiple times."
+                  << std::endl << "The total number of " << tar << " atoms is now "
+                  << map->at(tar) << "." << std::endl;
+      }
+      else {
+        // Create a new entry
+        map->insert(std::pair<std::string, int>(tar, number));
+      }
     }
 
-    TGraph* gRet = new TGraph(n, x, yRet);
+    return;
+  }
+
+  //----------------------------------------------------------------------
+  TGraph* XSec::GetGraphCompound(std::string compound, int pdg, std::string type)
+  {
+    // Character sets for string tokenization
+    std::string upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    std::string lowerCase = "abcdefghijklmnopqrstuvwxyz";
+    std::string number    = "0123456789";
+
+    // Make sure the first character is correct so the following while loop works
+    int i_compound = compound.find_first_of(upperCase);
+    if(i_compound != 0) {
+      std::cout << "Enter a valid compound. Each atom should have correct capitalization." << std::endl
+                << "This means that the first letter should be capitalized..." << std::endl;
+      abort();
+    }
+
+    // Map to contain the number of each atom
+    std::map<std::string, int> targetsByNumber;
+
+    // Loop over the compound capital letters
+    while(i_compound != std::string::npos) {
+      if(i_compound + 1 == compound.size() ||
+         compound.find_first_of(upperCase, i_compound + 1) == i_compound + 1) {
+        // Single letter atomic symbol, one atom
+
+        std::string tar = compound.substr(i_compound, 1); // This is the atomic symbol
+
+        AddElementToCompoundMap(tar, 1, &targetsByNumber); // Add this to the map
+      } // End of conditional that the atomic symbol has one letter and one atom
+      else if(compound.find_first_of(number, i_compound + 1) == i_compound + 1) {
+        // Single letter atomic symbol, multiple atoms
+
+        std::string tar = compound.substr(i_compound, 1);
+
+        // The position in the compound string of the first character for the coefficient
+        int numberBegin = compound.find_first_of(number, i_compound + 1);
+        // The number of characters in the coefficient
+        int numberLength = compound.find_first_not_of(number, numberBegin + 1) - numberBegin;
+        // Create a substring that is just the coefficient; convert it to an int
+        int number = std::atoi(compound.substr(numberBegin, numberLength).c_str());
+
+        AddElementToCompoundMap(tar, number, &targetsByNumber);
+      }
+      else if(compound.find_first_of(lowerCase, i_compound + 1) == i_compound + 1) {
+        // Double letter atomic symbol
+
+        // If the symbol has more than 1 letter, it only has 2
+        std::string tar = compound.substr(i_compound, 2);
+
+        if(i_compound + 2 == compound.size() ||
+           compound.find_first_of(upperCase, i_compound + 2) == i_compound + 2) {
+          // Double letter atomic symbol, one atom
+          AddElementToCompoundMap(tar, 1, &targetsByNumber);
+        }
+        else if(compound.find_first_of(number, i_compound + 2) == i_compound + 2) {
+          // Double letter atomic symbol, multiple atoms
+          int numberBegin = compound.find_first_of(number, i_compound + 1);
+          int numberLength = compound.find_first_not_of(number, numberBegin) - numberBegin;
+          int number = std::atoi(compound.substr(numberBegin, numberLength).c_str());
+
+          AddElementToCompoundMap(tar, number, &targetsByNumber);
+        }
+        else {
+          // Double letter atomic symbol followed by neither a capital letter nor number
+          std::cout << "Warning: Unknown character following element " << tar << ". " << std::endl
+                    << "Compounds should only contain letters and numbers," << std::endl
+                    << "and each new element should begin with a capital letter." << std::endl
+                    << "Skipping this element." << std::endl;
+        }
+      }
+      else {
+        // Single letter atomic symbol followed by neither a letter nor number
+        std::string tar = compound.substr(i_compound, 1); // Get the atomic symbol
+        std::cout << "Warning: Unknown character following element " << tar << ". " << std::endl
+                  << "Compounds should only contain letters and numbers." << std::endl
+                  << "Skipping this element." << std::endl;
+      }
+
+      // Move to the next atomic symbol
+      i_compound = compound.find_first_of(upperCase, i_compound + 1);
+    } // end of while loop over atomic symbols (capital letters)
+
+    if(targetsByNumber.size() == 0) {
+      std::cout << "Error: the compound contained no valid base atoms." << std::endl;
+      abort();
+    }
+
+    // Get the number of points in each graph
+    const int n = GetGraph(pdg, targetsByNumber.begin()->first, type)->GetN();
+    double x[n]; // Array of x values
+    double y = 0.; // Temp variables for the y value of each graph point
+    double yTot[n]; // The final y values array
+
+    double molarMass = 0.; // Molar mass of the compound
+
+    // Initialize arrays
+    for(int i = 0; i < n; ++i) {
+      x[i] = 0.;
+      yTot[i] = 0.;
+    }
+
+    // Loop over each target/number of atoms pair
+    for(const auto& tarPair : targetsByNumber) {
+      std::string tar = tarPair.first;
+
+      // Get the relevant base graph
+      TGraph* g = GetGraph(pdg, tar, type);
+
+      // Cast the coefficient of the current target as a double
+      double coeff = (double)tarPair.second;
+
+      // Loop over each point in the current graph
+      for(int i = 0; i < n; ++i) {
+        // Get the point, add it to the running total with the proper coefficient
+        g->GetPoint(i, x[i], y);
+        yTot[i] += coeff*y;
+      } // end of loop over points in the current graph
+
+      molarMass += coeff*fMolarMass[tar];
+    } // end of for loop over each target pair
+
+    // Otherwise, add the molar mass to the map
+    fMolarMass[compound] = molarMass;
+
+    // Create the graph to be returned
+    TGraph* gRet = new TGraph(n, x, yTot);
     return gRet;
   }
 
@@ -369,64 +558,11 @@ namespace flxrd
   {
     // All titles have the form:
     // "Cross Section: #nu_{<flavor>} <current> Scattering from <nucleus>" 
-
-    std::string title = "Cross Section: ";
-
-    if(pdg < 0) { 
-      title += "Anti-";
-    }
-
-    if(abs(pdg) == 12) {
-      title += "#nu_{e} ";
-    }
-    if(abs(pdg) == 14) {
-      title += "#nu_{#mu} ";
-    }
-    if(abs(pdg) == 16) {
-      title += "#nu_{#tau} ";
-    }
-
-    if(     type == "tot_cc") {
-      title += "CC";
-    }
-    else if(type == "tot_nc") {
-      title += "NC";
-    }
-    else {
-      title += type;
-    }
-
-    title += " Scattering from ";
-    if(tar == "H")   {
-      title += "^{1}H";
-    }
-    if(tar == "C")   {
-      title += "^{12}C";
-    }
-    if(tar == "N")   {
-      title += "^{14}N";
-    }
-    if(tar == "O")   {
-      title += "^{16}O";
-    }
-    if(tar == "S")   {
-      title += "^{32}S";
-    }
-    if(tar == "Cl")  {
-      title += "^{35}Cl";
-    }
-    if(tar == "Ar")  {
-      title += "^{40}Ar";
-    }
-    if(tar == "Ti")  {
-      title += "^{48}Ti";
-    }
-    if(tar == "Fe")  {
-      title += "^{56}Fe";
-    }
-    if(tar == "CH2") {
-      title += "CH_{2}";
-    }
+    std::string title = "Cross Section: " +
+                        TitleFlavor(pdg) +
+                        TitleProcess(type) +
+                        " Scattering from " +
+                        TitleTarget(tar);
 
     return title;
   }
@@ -444,284 +580,31 @@ namespace flxrd
 
     // First check if the title can be simplified a bit.
     if((tar1 == tar2) && (type1 == type2)) {
-      if(pdg1 < 0) {
-        title += "Anti-";
-      }
-      if(abs(pdg1) == 12) {
-        title += "#nu_{e} to ";
-      }
-      if(abs(pdg1) == 14) {
-        title += "#nu_{#mu} to ";
-      }
-      if(abs(pdg1) == 16) {
-        title += "#nu_{#tau} to ";
-      }
-
-      if(pdg2 < 0) {
-        title += "Anti-";
-      }
-      if(abs(pdg2) == 12) {
-        title += "#nu_{e} ";
-      }
-      if(abs(pdg2) == 14) {
-        title += "#nu_{#mu} ";
-      }
-      if(abs(pdg2) == 16) {
-        title += "#nu_{#tau} ";
-      }
-
-      if(     type1 == "tot_cc") {
-        title += "CC";
-      }
-      else if(type1 == "tot_nc") {
-        title += "NC";
-      }
-      else                       {
-        title += type1;
-      }
-
-      title += " Scattering from ";
-      if(tar1 == "H")   {
-        title += "^{1}H";
-      }
-      if(tar1 == "C")   {
-        title += "^{12}C";
-      }
-      if(tar1 == "N")   {
-        title += "^{14}N";
-      }
-      if(tar1 == "O")   {
-        title += "^{16}O";
-      }
-      if(tar1 == "S")   {
-        title += "^{32}S";
-      }
-      if(tar1 == "Cl")  {
-        title += "^{35}Cl";
-      }
-      if(tar1 == "Ar")  {
-        title += "^{40}Ar";
-      }
-      if(tar1 == "Ti")  {
-        title += "^{48}Ti";
-      }
-      if(tar1 == "Fe")  {
-        title += "^{56}Fe";
-      }
-      if(tar1 == "CH2") {
-        title += "CH_{2}";
-      }
+      title += TitleFlavor(pdg1) + "to " + TitleFlavor(pdg2) +
+               TitleProcess(type1) +
+               " Scattering from " +
+               TitleTarget(tar1);
     }
     else if(pdg1 == pdg2) {
-      if(pdg1 < 0) {
-        title += "Anti-";
-      }
-      if(abs(pdg1) == 12) {
-        title += "#nu_{e} ";
-      }
-      if(abs(pdg1) == 14) {
-        title += "#nu_{#mu} ";
-      }
-      if(abs(pdg1) == 16) {
-        title += "#nu_{#tau} ";
-      }
-
-      if(     type1 == "tot_cc") {
-        title += "CC";
-      }
-      else if(type1 == "tot_nc") {
-        title += "NC";
-      }
-      else                       {
-        title += type1;
-      }
-
-      title += " Scattering from ";
-      if(tar1 == "H")   {
-        title += "^{1}H";
-      }
-      if(tar1 == "C")   {
-        title += "^{12}C";
-      }
-      if(tar1 == "N")   {
-        title += "^{14}N";
-      }
-      if(tar1 == "O")   {
-        title += "^{16}O";
-      }
-      if(tar1 == "S")   {
-        title += "^{32}S";
-      }
-      if(tar1 == "Cl")  {
-        title += "^{35}Cl";
-      }
-      if(tar1 == "Ar")  {
-        title += "^{40}Ar";
-      }
-      if(tar1 == "Ti")  {
-        title += "^{48}Ti";
-      }
-      if(tar1 == "Fe")  {
-        title += "^{56}Fe";
-      }
-      if(tar1 == "CH2") {
-        title += "CH_{2}";
-      }
-      title += " to ";
-
-      if(     type2 == "tot_cc") {
-        title += "CC";
-      }
-      else if(type2 == "tot_nc") {
-        title += "NC";
-      }
-      else                       {
-        title += type2;
-      }
-
-      title += " Scattering from ";
-      if(tar2 == "H")   {
-        title += "^{1}H";
-      }
-      if(tar2 == "C")   {
-        title += "^{12}C";
-      }
-      if(tar2 == "N")   {
-        title += "^{14}N";
-      }
-      if(tar2 == "O")   {
-        title += "^{16}O";
-      }
-      if(tar2 == "S")   {
-        title += "^{32}S";
-      }
-      if(tar2 == "Cl")  {
-        title += "^{35}Cl";
-      }
-      if(tar2 == "Ar")  {
-        title += "^{40}Ar";
-      }
-      if(tar2 == "Ti")  {
-        title += "^{48}Ti";
-      }
-      if(tar2 == "Fe")  {
-        title += "^{56}Fe";
-      }
-      if(tar2 == "CH2") {
-        title += "CH_{2}";
-      }
+      title += TitleFlavor(pdg1) +
+               TitleProcess(type1) +
+               " Scattering from " +
+               TitleTarget(tar1) +
+               " to " +
+               TitleProcess(type2) +
+               " Scattering from " +
+               TitleTarget(tar2);
     }
     else {
-      if(pdg1 < 0) {
-        title += "Anti-";
-      }
-      if(abs(pdg1) == 12) {
-        title += "#nu_{e} ";
-      }
-      if(abs(pdg1) == 14) {
-        title += "#nu_{#mu} ";
-      }
-      if(abs(pdg1) == 16) {
-        title += "#nu_{#tau} ";
-      }
-
-      if(     type1 == "tot_cc") {
-        title += "CC";
-      }
-      else if(type1 == "tot_nc") {
-        title += "NC";
-      }
-      else                       {
-        title += type1;
-      }
-
-      title += " Scattering from ";
-      if(tar1 == "H")   {
-        title += "^{1}H";
-      }
-      if(tar1 == "C")   {
-        title += "^{12}C";
-      }
-      if(tar1 == "N")   {
-        title += "^{14}N";
-      }
-      if(tar1 == "O")   {
-        title += "^{16}O";
-      }
-      if(tar1 == "S")   {
-        title += "^{32}S";
-      }
-      if(tar1 == "Cl")  {
-        title += "^{35}Cl";
-      }
-      if(tar1 == "Ar")  {
-        title += "^{40}Ar";
-      }
-      if(tar1 == "Ti")  {
-        title += "^{48}Ti";
-      }
-      if(tar1 == "Fe")  {
-        title += "^{56}Fe";
-      }
-      if(tar1 == "CH2") {
-        title += "CH_{2}";
-      }
-      title += " to ";
-
-      if(pdg2 < 0) {
-        title += "Anti-";
-      }
-      if(abs(pdg2) == 12) {
-        title += "#nu_{e} ";
-      }
-      if(abs(pdg2) == 14) {
-        title += "#nu_{#mu} ";
-      }
-      if(abs(pdg2) == 16) {
-        title += "#nu_{#tau} ";
-      }
-
-      if(     type2 == "tot_cc") {
-        title += "CC";
-      }
-      else if(type2 == "tot_nc") {
-        title += "NC";
-      }
-      else                       {
-        title += type2;
-      }
-
-      title += " Scattering from ";
-      if(tar2 == "H")   {
-        title += "^{1}H";
-      }
-      if(tar2 == "C")   {
-        title += "^{12}C";
-      }
-      if(tar2 == "N")   {
-        title += "^{14}N";
-      }
-      if(tar2 == "O")   {
-        title += "^{16}O";
-      }
-      if(tar2 == "S")   {
-        title += "^{32}S";
-      }
-      if(tar2 == "Cl")  {
-        title += "^{35}Cl";
-      }
-      if(tar2 == "Ar")  {
-        title += "^{40}Ar";
-      }
-      if(tar2 == "Ti")  {
-        title += "^{48}Ti";
-      }
-      if(tar2 == "Fe")  {
-        title += "^{56}Fe";
-      }
-      if(tar2 == "CH2") {
-        title += "CH_{2}";
-      }
+      title += TitleFlavor(pdg1) +
+               TitleProcess(type1) +
+               " Scattering from " +
+               TitleTarget(tar1) +
+               " to " +
+               TitleFlavor(pdg2) +
+               TitleProcess(type2) +
+               " Scattering from " +
+               TitleTarget(tar2);
     }
 
     // Easter egg.
@@ -752,7 +635,7 @@ namespace flxrd
     }
     else if(!type.compare("ve_ccncmix") && abs(pdg) != 12) {
       if(inSetXSecGenStr) {
-        std::cout << type << " is only available for electron and anti-electron neutrions." << std::endl;
+        std::cout << type << " is only available for electron and anti-electron neutrinos." << std::endl;
         std::cout << "Changing type to ve_nc." << std::endl;
       }
       type = "ve_nc";
@@ -762,107 +645,227 @@ namespace flxrd
   }
 
   //----------------------------------------------------------------------
+  void XSec::SetupValidInputs()
+  {
+    fIntType.clear();
+    fNuPDG.clear();
+    fTarget.clear();
+
+    TDirectory* tmp = gDirectory;
+    fXSecFile->cd();
+
+    // Loop over all keys in the top directory
+    TIter nextkeyTop(gDirectory->GetListOfKeys());
+    TKey* key;
+    TKey* oldkey = 0;
+
+    while((key = (TKey*)nextkeyTop())) {
+      // Keep only the highest cycle number for each key
+      if(oldkey && !strcmp(oldkey->GetName(), key->GetName())) { continue; }
+
+      std::string name(key->GetName()); // Get the name of the object (should be a folder)
+
+      // Find the length of the flavor name, which has the form nu_<flav>_(bar_)
+      int endOfNuName = ((name.find("bar_") != std::string::npos) ?
+                         name.find("bar_") + 4 :
+                         name.find('_', 3) + 1);
+
+      // Copy the flavor name into a local variable, erase it from the full name
+      std::string nuName = name.substr(0, endOfNuName);
+      name.erase(0, nuName.size());
+
+      // Calculate the PDG of the neutrino
+      int pdg;
+      if     (nuName.find("_e_")   != std::string::npos) { pdg = 12; }
+      else if(nuName.find("_mu_")  != std::string::npos) { pdg = 14; }
+      else if(nuName.find("_tau_") != std::string::npos) { pdg = 16; }
+      else { std::cout << "Error: Unknown neutrino flavor." << std::endl; }
+
+      if(nuName.find("bar") != std::string::npos) { pdg *= -1; }
+
+      // Add the PDG and name to the valid flavor map
+      fNuPDG.insert(std::pair<int, std::string>(pdg, nuName));
+
+      // What is left should be Ab##, but Ab may only be one character
+      // Get just the code in a local variable, but keep the full string
+      std::string atomicCode = name.substr(0, name.find_first_of("0123456789"));
+
+      // Add the target and its full name to the valid target map
+      std::pair<std::string, std::string> targetPair(atomicCode, name);
+      fTarget.insert(targetPair);
+    } // end of while loop over TKeys
+
+    // Next, get the interaction process types
+    // One loop over a subdirectory should suffice,
+    // with a small caveat discussed after the loop
+    std::string subdir = fNuPDG.begin()->second + fTarget.begin()->second;
+    fXSecFile->cd(subdir.c_str());
+
+    TIter nextkeySub(gDirectory->GetListOfKeys());
+    oldkey = 0;
+
+    while((key = (TKey*)nextkeySub())) {
+      // Keep only the highest cycle number for each key
+      if(oldkey && !strcmp(oldkey->GetName(), key->GetName())) { continue; }
+
+      std::string name(key->GetName()); // Get the name of the object (should be a TGraph)
+
+      // Add the process to the list of valid processes
+      fIntType.insert(name);
+    } // end of while loop over TKeys
+
+    // Scattering off of electrons differs based on the neutrino flavor
+    // If one of the standard processes was found, add the other
+    if     (fIntType.find("ve_ccncmix") != fIntType.end()) {
+      fIntType.insert("ve_nc");
+    }
+    else if(fIntType.find("ve_nc") != fIntType.end()) {
+      fIntType.insert("ve_ccncmix");
+    }
+
+    tmp->cd();
+
+    return;
+  }
+
+  //----------------------------------------------------------------------
   void XSec::SetXSecGenStr(int pdg, std::string tar, std::string& type)
   {
     // String has form "pdg_(bar_)Ab##/InteractionType",
     // where Ab is the atom code and ## is the number of nucleons
-    bool valid_input = false;
-    fXSecGenStr = "nu_"; // All directories in the cross section file begin with this string
 
-    // Next component in the directory string is the neutrino type
-    for(const auto& allowedPDG : fNuPDG) {
-      if(pdg == allowedPDG) {
-        if(abs(pdg) == 12) {
-          fXSecGenStr += "e_";
-        }
-        if(abs(pdg) == 14) {
-          fXSecGenStr += "mu_";
-        }
-        if(abs(pdg) == 16) {
-          fXSecGenStr += "tau_";
-        }
-
-        valid_input = true;
-      }
+    if(fNuPDG.find(pdg) != fNuPDG.end()) {
+      fXSecGenStr = fNuPDG.find(pdg)->second;
     }
-    if(!valid_input) { // Check for valid neutrino pdg. If invalid, show user list before quitting
+    else { // If invalid neutrino, show user list before quitting
       std::cout << "Invalid neutrino. Please input one of the following:" << std::endl;
       for(const auto& allowedPDG : fNuPDG) {
-        std::cout << allowedPDG << std::endl;
+        std::cout << allowedPDG.first << std::endl;
       }
-    }
-    assert(valid_input);
-    valid_input = false; // Reset valid_input for next piece of label
 
-    if(pdg < 0) {
-      fXSecGenStr += "bar_"; // Add if necessary to directory string
+      abort();
     }
 
-    // Last component of directory string is target
-    for(const auto& allowedTar : fTarget) {
-      if(!tar.compare(allowedTar.first)) {
-        if     (!tar.compare("H"))  { 
-          fXSecGenStr += "H1/";
-        }
-        else if(!tar.compare("C"))  { 
-          fXSecGenStr += "C12/";
-        }
-        else if(!tar.compare("N"))  { 
-          fXSecGenStr += "N14/";
-        }
-        else if(!tar.compare("O"))  { 
-          fXSecGenStr += "O16/";
-        }
-        else if(!tar.compare("S"))  { 
-          fXSecGenStr += "S32/";
-        }
-        else if(!tar.compare("Cl")) {
-          fXSecGenStr += "Cl35/";
-        }
-        else if(!tar.compare("Ar")) {
-          fXSecGenStr += "Ar40/";
-        }
-        else if(!tar.compare("Ti")) {
-          fXSecGenStr += "Ti48/";
-        }
-        else if(!tar.compare("Fe")) {
-          fXSecGenStr += "Fe56/";
-        }
-
-        valid_input = true;
-      }
+    if(fTarget.find(tar) != fTarget.end()) {
+      fXSecGenStr += fTarget.find(tar)->second + "/";
     }
-    if(!valid_input) { // Check for valid target. If invalid, show user list before quitting
+    else { // If invalid target, show user list before quitting
       std::cout << "Invalid target. Please input one of the following:" << std::endl;
       for(const auto& allowedTar : fTarget) {
         std::cout << allowedTar.first << std::endl;
       }
+
+      abort();
     }
-    assert(valid_input);
-    valid_input = false;
 
-    for(const auto& allowedType : fIntType) {
-      if(type == allowedType) { // After directory, add the interaction type
-        // If the requested cross section is scattering off of electrons,
-        // make sure the the appropriate process is used based on the neutrino flavor
-        NuElectronCheck(type, pdg, true);
+    // After directory, add the interaction type
+    if(fIntType.find(type) != fIntType.end()) {
+      // If the requested cross section is scattering off of electrons,
+      // make sure the the appropriate process is used based on the neutrino flavor
+      NuElectronCheck(type, pdg, true);
 
-        fXSecGenStr += type;
-        valid_input = true;
-
-        // End the loop now to avoid double checking the type if it was altered by NuElectronCheck
-        if(valid_input) {
-          break;
-        }
-      }
+      fXSecGenStr += type;
     }
-    if(!valid_input) { // Check for valid interaction type. If invalid, give user advice before quitting
+    else { // Check for valid interaction type. If invalid, give user advice before quitting
       std::cout << "Invalid interaction type." << std::endl;
       std::cout << "For the most general CC or NC, input tot_cc or tot_nc, respectively." << std::endl;
       std::cout << "For a full list of all the inputs, call the function ListIntTypes()." << std::endl;
+
+      abort();
     }
-    assert(valid_input);
 
     return;
+  }
+
+  //----------------------------------------------------------------------
+  std::string XSec::TitleFlavor(const int& pdg) const
+  {
+    // The format for the neutrino flavor is (Anti-)#nu_{(#)flav}
+
+    // Start with "#nu_flav_(bar_)"
+    std::string titleHelper = "#" + fNuPDG.find(pdg)->second;
+
+    // Find the first letter of the flavor
+    int flavorBegin  = titleHelper.find("_") + 1;
+    // Calculate the number of characters of the flavor
+    int flavorLength = titleHelper.find("_", flavorBegin) - flavorBegin;
+
+    // Create a helper string, start with just "{"
+    std::string flavor = "{";
+    // If the flavor is a Greek symbol, add a "#", to get "{#"
+    if(titleHelper.find("nu_e_") == std::string::npos) { flavor += "#"; }
+    // Add the flavor and final "}" to get "{(#)flav}"
+    flavor += titleHelper.substr(flavorBegin, flavorLength) + "}";
+
+    // Replace the flavor in the original string with the helper
+    // "#nu_flav_(bar_)" becomes "#nu_{(#)flav}(bar_)
+    titleHelper.replace(flavorBegin, flavorLength + 1, flavor);
+
+    // Replace "bar_" at the end by "Anti-" at the beginning, if applicable
+    if(titleHelper.find("bar_") != std::string::npos) {
+      titleHelper.erase(titleHelper.find("bar_"), 4);
+      titleHelper = "Anti-" + titleHelper;
+    }
+
+    titleHelper += " ";
+
+    return titleHelper;
+  }
+
+  //----------------------------------------------------------------------
+  std::string XSec::TitleProcess(const std::string& type) const
+  {
+    // The format for the process is exactly the process, unless it is CC or NC
+    if(!type.compare("tot_cc")) { return "CC"; }
+    if(!type.compare("tot_nc")) { return "NC"; }
+
+    return type;
+  }
+
+  //----------------------------------------------------------------------
+  std::string XSec::TitleTarget(const std::string& tar) const
+  {
+    // Character set of numbers
+    std::string number = "0123456789";
+
+    std::string titleHelper = tar;
+
+    if(fTarget.find(tar) != fTarget.end()) { // Base atom
+      // Start with "Ab##"
+      titleHelper = fTarget.find(tar)->second;
+
+      // Find where the coefficient begins
+      int coeffBegin  = titleHelper.find_first_of(number);
+      // Get the number of characters in the coefficient
+      int coeffLength = titleHelper.find_last_of(number) - coeffBegin + 1;
+
+      // Get the coefficient as a separate string, erase it from the helper
+      std::string coeff = titleHelper.substr(coeffBegin, coeffLength);
+      titleHelper.erase(coeffBegin, coeffLength);
+
+      // Prepend the coefficient as a superscript to the left of the atomic symbol
+      titleHelper = "^{" + coeff + "}" + titleHelper;
+    }
+    else { // Compound
+      int coeffBegin = titleHelper.find_first_of(number); // Find the first coefficient
+
+      while(coeffBegin != std::string::npos) {
+        // Find the first non numeric character after the current one
+        int coeffEnd = titleHelper.find_first_not_of(number, coeffBegin);
+        // Calculate the number of characters in the coefficient
+        int coeffLength = ((coeffEnd != std::string::npos) ?
+                           coeffEnd - coeffBegin :
+                           titleHelper.size() - coeffBegin);
+
+        // Replace the coefficient with a subscript version
+        std::string rep_str = "_{" + titleHelper.substr(coeffBegin, coeffLength) + "}";
+        titleHelper.replace(coeffBegin, coeffLength, rep_str);
+
+        // Move to the next coefficient, taking into account the additional string characters
+        coeffBegin = titleHelper.find_first_of(number, 2 + coeffBegin + coeffLength);
+      } // end of loop over compound coefficients
+    }
+
+    return titleHelper;
   }
 }
