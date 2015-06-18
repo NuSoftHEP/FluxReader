@@ -87,6 +87,28 @@ void Demo1_Parameters()
   // This Spectra will have the same flavors, parents and cross sections,
   // but it will NOT include the NOvA FD
 
+  // Parameters can also be toggled to switch what level of ancestry spectra are split at
+  // By default, when Parameters is constructed,
+  // this split occurs at the direct neutrino parent
+  // The split can be made by the species of the ancestor
+  // by calling SetAncestorTgt(), and it can be switched back with SetAncestorPar()
+  // Again, order matters! All Spectra created before calling SetAncestorTgt()
+  // will be made by splitting at the direct neutrino parent
+  // The following Spectra will be made by splitting by the ancestor that left the target
+  p.SetAncestorTgt();
+  fr->AddSpectra(p, "enuTgt", "Energy (GeV)", Bins(100, 0., 10.), kEnergy);
+  // This Spectra will be have the same flavors, parents (ancestors),
+  // cross sections, and detectors as enu2,
+  // but it will not split on the direct neutrino parent,
+  // instead it will split on the ancestor that left the target
+  // This means the content of the spectra will be slightly different
+
+  // Without calling SetAncestorPar(), any new Spectra will still split by
+  // the ancestor that left the target
+  // If it is desired to create new Spectra that split by the direct parent,
+  // the following line of code would be necessary (uncommented, of course)
+  //p.SetAncestorPar();
+
   TFile* out = new TFile("/nova/ana/users/gkafka/FluxReader/demo1.root", "RECREATE");
 
   fr->ReadFlux(out);
