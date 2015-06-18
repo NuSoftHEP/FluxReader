@@ -88,8 +88,11 @@ namespace flxrd
     /// Access the current master index
     int GetCurrentMaster() const;
 
+    /// Get whether to split neutrino ancestor by parent or ancestor exiting target
+    bool GetAncestorPar() const { return fAncestorPar; }
+
     /// Pull a stored detector to call its class functions
-    Detector GetDetector(int i_det)  const;
+    Detector GetDetector(int i_det) const;
 
     /// Pull a stored NuFlav to call its class functions
     NuFlav GetNuFlav(  int i_flav) const;
@@ -137,6 +140,12 @@ namespace flxrd
     /// Reset fNuFlavs to include all neutrino flavors
     void ResetNuFlavs();
 
+    /// Set Parameters to split by neutrino parent
+    void SetAncestorPar();
+
+    /// Set Parameters to split by ancestor leaving target
+    void SetAncestorTgt();
+
     /// Set parameter vectors to some sensible defaults
     /// This does not add any detectors
     void SetDefaults(bool SignSensitive = true);
@@ -181,6 +190,7 @@ namespace flxrd
     /// which can be thought of as returning "index of last element + 1"
     Indices end() const;
 
+    bool fAncestorPar;   ///< Store whether neutrino plots are split by parent or target exit ancestor
     bool fSignSensitive; ///< Store whether neutrino sign is considered (true) or ignored (false)
     bool fVerbosity;     ///< Determine how much output to print
 

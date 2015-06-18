@@ -52,6 +52,8 @@ namespace flxrd
     /// The correct histogram will be determined from fParams
     virtual void Fill(bsim::Dk2Nu* nu, std::map<std::string, int> nurayIndices) = 0;
 
+    int GetAncestorPDG(bsim::Dk2Nu* nu) const;
+
     /// Fills the cross section spline map
     void SetupXSec();
 

@@ -65,7 +65,8 @@ namespace flxrd
 
   //---------------------------------------------------------------------------
   Parameters::Parameters(bool SignSensitive, bool verbosity)
-    : fSignSensitive(SignSensitive),
+    : fAncestorPar(true),
+      fSignSensitive(SignSensitive),
       fVerbosity(verbosity)
   {
     SetDefaults(SignSensitive); // Set sensible default flavors, parents, and cross sections
@@ -75,7 +76,8 @@ namespace flxrd
 
   //---------------------------------------------------------------------------
   Parameters::Parameters(const Parameters& params)
-    : fSignSensitive(params.IsSignSensitive()),
+    : fAncestorPar(params.fAncestorPar),
+      fSignSensitive(params.IsSignSensitive()),
       fVerbosity(params.fVerbosity),
       fNuFlav(params.fNuFlav),
       fParent(params.fParent),
@@ -367,6 +369,20 @@ namespace flxrd
 
     fNuFlav = NuFlav::AllNuFlavs(); // Populate the vector with all flavors
     UpdateIndices(); // Make sure the Parameters' Indices object is aware of this change
+    return;
+  }
+
+  //---------------------------------------------------------------------------
+  void Parameters::SetAncestorPar()
+  {
+    fAncestorPar = true;
+    return;
+  }
+
+  //---------------------------------------------------------------------------
+  void Parameters::SetAncestorTgt()
+  {
+    fAncestorPar = false;
     return;
   }
 

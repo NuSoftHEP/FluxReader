@@ -44,8 +44,8 @@ namespace flxrd
     }
 
     // Get the neutrino parent PDG from the flux object (absolute value if applicable)
-    int parPDG = ( (fParams.IsSignSensitive()) ?     nu->decay.ptype
-                                               : abs(nu->decay.ptype) );
+    int parPDG = ( (fParams.IsSignSensitive()) ?     GetAncestorPDG(nu)
+                                               : abs(GetAncestorPDG(nu)) );
 
     if(!fParams.SetCurrentParent(parPDG)) {
       return;

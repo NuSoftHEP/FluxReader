@@ -29,7 +29,15 @@ namespace flxrd
 
     // These default branches are needed to split between neutrino flavor and parent type,
     // in order to fill or write the correct histogram, and to evaluate cross sections
-    fBranches = {"nuray", "nuray.E", "nuray.wgt", "decay", "decay.ntype", "decay.ptype", "decay.nimpwt"};
+    fBranches = {"nuray", "nuray.E", "nuray.wgt", "decay", "decay.ntype", "decay.nimpwt"};
+
+    if(fParams.GetAncestorPar()) {
+      fBranches.insert("decay.ptype");
+    }
+    else {
+      fBranches.insert("tgtexit");
+      fBranches.insert("tgtexit.tptype");
+    }
 
     // Add variables needed by x axis variable and weight to the list of branches
     fBranches.insert(fVarX.Branches().begin(), fVarX.Branches().end());
@@ -48,6 +56,16 @@ namespace flxrd
     }
 
     return ret;
+  }
+
+  //---------------------------------------------------------------------------
+  int Spectra::GetAncestorPDG(bsim::Dk2Nu* nu) const
+  {
+    if(fParams.GetAncestorPar()) {
+      return nu->decay.ptype;
+    }
+
+    return nu->tgtexit.tptype;
   }
 
   //---------------------------------------------------------------------------

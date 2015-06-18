@@ -71,8 +71,8 @@ namespace flxrd
       return;
     }
 
-    int parPDG = ( (fParams.IsSignSensitive()) ?     nu->decay.ptype
-                                               : abs(nu->decay.ptype) );
+    int parPDG = ( (fParams.IsSignSensitive()) ?     GetAncestorPDG(nu)
+                                               : abs(GetAncestorPDG(nu)) );
 
     if(!fParams.SetCurrentParent(parPDG)) {
       return;
