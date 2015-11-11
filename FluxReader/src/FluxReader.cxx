@@ -149,7 +149,7 @@ namespace flxrd
 
           double energy = 0., propwt = 0.;
 
-          if(det.GetUses() == 1) {
+          if(det.GetUses() == 0) {
             TVector3 xyz(0., 0., 0.);
             ToBeamCoords(det, xyz); // Convert coordinates to beam coordinates
             bsim::calcEnuWgt(fNu, xyz, energy, propwt); // Perform the reweight calculation
@@ -508,7 +508,9 @@ namespace flxrd
       // This will be the first index in the NuRay vector in the Dk2Nu object corresponding to the current detector
       fNuRayIndex[det.GetDetName()] = index;
 
-      index += det.GetUses(); // Increment index by the number of times to use the current detector
+      // Increment index by the number of times to use the current detector
+      // If that value is 0, increment by 1
+      index += (det.GetUses() == 0 ? 1 : det.GetUses());
     }
     fNuRayIndex["znull"] = index; // This will signal the last NuRay index
 

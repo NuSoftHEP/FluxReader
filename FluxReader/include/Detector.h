@@ -17,12 +17,12 @@ namespace flxrd
     Detector(const std::string& det_name, const std::string& target,
              const double& coordx, const double& coordy, const double& coordz,
              const double& sizex,  const double& sizey,  const double& sizez,
-             const int& nuses);
+             const unsigned int& nuses);
 
     Detector(const std::string& det_name, const std::string& target,
              const std::vector<double>& coords,
              const std::vector<double>& sizes,
-             const int& nuses);
+             const unsigned int& nuses);
 
     /// Get detector name
     std::string GetDetName() const { return fDetName; }
@@ -51,13 +51,15 @@ namespace flxrd
     double GetHalfSizeZ() const { return fSize[2]/2.; }
 
     /// Get the number of times to use a neutrino ray in the detector
-    int GetUses() const { return fUses; }
+    /// The value 0 is a special value to FluxReader;
+    /// it means to not smear a neutrino ray through the detector
+    unsigned int GetUses() const { return fUses; }
 
     /// Print the detector name, target, coordinates, size, and number of uses
     void PrintAll() const;
 
     /// Set the number fo times to use a neutrino ray in the detector
-    void SetUses(int nuses) { fUses = nuses; }
+    void SetUses(unsigned int nuses) { fUses = nuses; }
 
     /// Simple method for comparing detectors, based on name comparison
     bool operator<(const Detector& otherDet) const
@@ -71,6 +73,6 @@ namespace flxrd
     std::vector<double> fCoord; ///< Detector coordinates (cm)
     std::vector<double> fSize;  ///< Detector size (cm)
 
-    int fUses; ///< Number of times to use a neutrino ray in the detector
+    unsigned int fUses; ///< Number of times to use a neutrino ray in the detector
   };
 }

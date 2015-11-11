@@ -59,6 +59,9 @@ namespace flxrd
 
       int first_nuray = nurayIndices[fParams.GetDetName(i_det)];
       int last_nuray  = first_nuray + fParams.GetDetector(i_det).GetUses();
+      if(last_nuray == first_nuray) {
+        ++last_nuray;
+      }
 
       for(int i_xsec = 0, n_xsec = fParams.NXSec(); i_xsec < n_xsec; ++i_xsec) {
         fParams.SetCurrentXSec(i_xsec);

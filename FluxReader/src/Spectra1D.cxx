@@ -57,6 +57,13 @@ namespace flxrd
       // Get the first and last indices in the NuRay vector corresponding to the current detector
       int first_nuray = nurayIndices[fParams.GetDetName(i_det)];
       int last_nuray  = first_nuray + fParams.GetDetector(i_det).GetUses();
+      
+      // If GetUses returns 0,
+      // this tells FluxReader to not smear the neutrino ray through the detector.
+      // It also means that last_nuray needs to be incremented by 1
+      if(last_nuray == first_nuray) {
+        ++last_nuray;
+      }
 
       for(int i_xsec = 0, n_xsec = fParams.NXSec(); i_xsec < n_xsec; ++i_xsec) {
         fParams.SetCurrentXSec(i_xsec);

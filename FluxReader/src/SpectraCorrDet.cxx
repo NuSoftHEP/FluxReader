@@ -81,10 +81,16 @@ namespace flxrd
     // Get the first and last indices in the NuRay vector corresponding to the x axis detector
     int first_nuray_x = nurayIndices[fParams.GetDetName(i_detX)];
     int last_nuray_x  = first_nuray_x + fParams.GetDetector(i_detX).GetUses();
+    if(last_nuray_x == first_nuray_x) {
+      ++last_nuray_x;
+    }
 
     // Get the first and last indices in the NuRay vector corresponding to the y axis detector
     int first_nuray_y = nurayIndices[fParams.GetDetName(i_detY)];
     int last_nuray_y  = first_nuray_y + fParams.GetDetector(i_detY).GetUses();
+      if(last_nuray_y == first_nuray_y) {
+        ++last_nuray_y;
+      }
 
     fParams.SetCurrentDet(i_detY); // Set the current detector to detY
 
