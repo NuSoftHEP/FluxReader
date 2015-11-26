@@ -9,7 +9,7 @@ namespace flxrd
   Detector::Detector(const std::string& det_name, const std::string& target,
                      const double& coordx, const double& coordy, const double& coordz,
                      const double& sizex,  const double& sizey,  const double& sizez,
-                     const int& nuses)
+                     const unsigned int& nuses)
     : fDetName(det_name), fTarget(target), fUses(nuses)
   {
     // Make sure vectors are empty
@@ -35,7 +35,7 @@ namespace flxrd
   Detector::Detector(const std::string& det_name, const std::string& target,
                      const std::vector<double>& coords,
                      const std::vector<double>& sizes,
-                     const int& nuses)
+                     const unsigned int& nuses)
     : fDetName(det_name), fTarget(target), fUses(nuses)
   {
     // Make sure vectors are empty
