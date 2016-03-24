@@ -1,13 +1,15 @@
 source /nusoft/app/externals/setup
 setup cmake
 
+source /grid/fermiapp/products/nova/externals/setup
+
 if(env | grep -q ^DK2NU)
 then
   echo "Dk2Nu has already been setup."
   echo "If the version is not correct, this may cause errors."
   echo "If this occurs, try starting a fresh terminal session."
 else
-  setup dk2nu      v01_01_03 -q debug:e5
+  setup dk2nu      v01_01_03c -q debug:e7
 fi
 
 if(env | grep -q ^GENIEXSECPATH)
@@ -16,7 +18,7 @@ then
   echo "If the version is not correct, this may cause errors."
   echo "If this occurs, try starting a fresh terminal session."
 else
-  setup genie_xsec R-2_8_0   -q default
+  setup genie_xsec v2_8_6a  -q default
 fi
 
 export FLUXREADER_PRIV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
