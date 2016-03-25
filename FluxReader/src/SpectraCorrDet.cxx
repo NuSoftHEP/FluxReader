@@ -224,7 +224,7 @@ namespace flxrd
         TH1D* hNorm = (TH1D*)fNorms[i_hist]->Clone();
 
         for(unsigned int i_par  = 1; i_par  < n_par;  ++i_par) {
-          index += n_flav; // This corresponds to an increment of the Parent index
+          i_hist += n_flav; // This corresponds to an increment of the Parent index
 
           hHist->Add(fHists[i_hist]);
           hNorm->Add(fNorms[i_hist]);
