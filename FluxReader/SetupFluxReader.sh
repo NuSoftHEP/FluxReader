@@ -9,7 +9,7 @@ then
   echo "If the version is not correct, this may cause errors."
   echo "If this occurs, try starting a fresh terminal session."
 else
-  setup dk2nu      v01_01_03c -q debug:e7
+  setup dk2nu      v01_03_00c -q debug:e9:r5
 fi
 
 if(env | grep -q ^GENIEXSECPATH)

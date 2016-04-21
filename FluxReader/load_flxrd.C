@@ -53,7 +53,7 @@ int load_flxrd()
 
   include_path += " -I";
   include_path += dk2nu_path;
-  include_path += "/tree";
+  include_path += "/include/dk2nu/tree";
 
   include_path += " -I";
   include_path += fluxreader_priv_path;
