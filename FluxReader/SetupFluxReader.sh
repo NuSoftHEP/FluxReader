@@ -9,7 +9,7 @@ then
   echo "If the version is not correct, this may cause errors."
   echo "If this occurs, try starting a fresh terminal session."
 else
-  setup dk2nu      v01_03_00c -q debug:e9:r5
+  setup dk2nu v01_03_00c -q debug:e9:r5
 fi
 
 if(env | grep -q ^GENIEXSECPATH)
@@ -18,7 +18,7 @@ then
   echo "If the version is not correct, this may cause errors."
   echo "If this occurs, try starting a fresh terminal session."
 else
-  setup genie_xsec v2_8_6a  -q default
+  setup genie_xsec v2_10_6 -q defaultplusccmec
 fi
 
 export FLUXREADER_PRIV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
