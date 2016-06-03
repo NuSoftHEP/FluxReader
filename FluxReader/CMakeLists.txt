@@ -24,6 +24,7 @@ find_package(ROOT REQUIRED)
 set(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES}
                         ${PROJECT_SOURCE_DIR}/include
                         $ENV{ROOTSYS}/include
+                        $ENV{DK2NU}/include/dk2nu/tree
                         $ENV{DK2NU}/tree)
 
 include_directories(${INCLUDE_DIRECTORIES})
@@ -40,6 +41,7 @@ link_directories(${LINK_DIRECTORIES})
 
 include_directories(${PROJECT_SOURCE_DIR}/include
                     $ENV{ROOTSYS}/include
+                    $ENV{DK2NU}/include/dk2nu/tree
                     $ENV{DK2NU}/tree)
 
 set(_root_internal_libraries
