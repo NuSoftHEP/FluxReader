@@ -1,7 +1,7 @@
-source /nusoft/app/externals/setup
+source /cvmfs/nova.opensciencegrid.org/nusoft/app/externals/setup
 setup cmake
 
-source /grid/fermiapp/products/nova/externals/setup
+source /cvmfs/nova.opensciencegrid.org/externals/setup
 
 if(env | grep -q ^DK2NU)
 then

@@ -207,21 +207,28 @@ namespace flxrd
   //---------------------------------------------------------------------------
   std::vector<std::string> Wildcard(std::string fileWildcard)
   {
-    // First, expand environment variables and wildcards like the shell would
-    wordexp_t p;
-    wordexp(fileWildcard.c_str(), &p, WRDE_SHOWERR);
-
     std::vector<std::string> filelist;
 
-    for(unsigned int i = 0; i < p.we_wordc; ++i){
-      // Check the file exists before adding it
-      struct stat sb;
-      if(stat(p.we_wordv[i], &sb) == 0)
-        filelist.push_back(p.we_wordv[i]); // Add the file
+    if( fileWildcard.find("root://") != std::string::npos ){
+      //This path is using XROOTD. Pray that the user knows what they are doing.
+      filelist.push_back(fileWildcard);
     }
+    else{
+      // First, expand environment variables and wildcards like the shell would
+      wordexp_t p;
+      wordexp(fileWildcard.c_str(), &p, WRDE_SHOWERR);
 
-    wordfree(&p); // Clean up
 
+
+      for(unsigned int i = 0; i < p.we_wordc; ++i){
+	// Check the file exists before adding it
+	struct stat sb;
+	if(stat(p.we_wordv[i], &sb) == 0)
+	  filelist.push_back(p.we_wordv[i]); // Add the file
+      }
+
+      wordfree(&p); // Clean up
+    }
     return filelist;
   }
 }

@@ -339,7 +339,7 @@ namespace flxrd
       // This environment variable points to the folder with the most current version of the Genie cross sections
       xsecFileName = std::getenv("GENIEXSECPATH");
 
-      xsecFileName += "/xsec_graphs_*_*.root"; // General format of the cross section filename
+      xsecFileName += "/xsec_graphs*.root"; // General format of the cross section filename
       std::vector<std::string> files = Wildcard(xsecFileName); // Get a list of all files matching the wildcard
 
       if(files.size() >= 1) {
