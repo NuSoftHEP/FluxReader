@@ -153,7 +153,7 @@ namespace flxrd
     /// Set the number of uses for a specific detector
     void SetDetUses(std::string detname, int nuses);
 
-    /// Hack
+    /// HACK
     /// Moved this to public to solve compiling issue when Specrtra tries to create a
     /// a copy. I don't understand why friendship isn't allowing this.
     /// Copy constructor
