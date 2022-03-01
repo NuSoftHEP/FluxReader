@@ -17,7 +17,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake
                       $ENV{ROOTSYS}/etc/cmake 
                       ${CMAKE_MODULE_PATH})
 
-set(CMAKE_CXX_FLAGS "-std=c++0x")
+set(CMAKE_CXX_FLAGS "-std=c++17")
 
 find_package(ROOT REQUIRED)
 
