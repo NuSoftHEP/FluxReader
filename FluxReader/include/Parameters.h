@@ -153,12 +153,16 @@ namespace flxrd
     /// Set the number of uses for a specific detector
     void SetDetUses(std::string detname, int nuses);
 
-  private:
+    /// Hack
+    /// Moved this to public to solve compiling issue when Specrtra tries to create a
+    /// a copy. I don't understand why friendship isn't allowing this.
     /// Copy constructor
     /// This is only used by Spectra during its own construction
     /// It copies the current Parameters into a new object stored by the Spectra object,
     /// allowing for the original one to be configured further
     Parameters(const Parameters& params);
+
+  private:
 
     /// Remove all parameters
     void ClearAll();

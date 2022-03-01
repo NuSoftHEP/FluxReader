@@ -1,7 +1,5 @@
 int load_flxrd()
 {
-  gSystem->Load("libCintex.so");
-  Cintex::Enable();
 
   // Get all of the environment variable paths
 
