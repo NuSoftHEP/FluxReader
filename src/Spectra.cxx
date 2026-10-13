@@ -71,7 +71,12 @@ namespace flxrd
   //---------------------------------------------------------------------------
   void Spectra::SetupXSec()
   {
-    XSec* xsec = new XSec(); // Create XSec object
+    // XSec's constructor unconditionally opens a GENIE xsec_graphs*.root file
+    // (via $GENIEXSECPATH), even though it's only actually needed when a real
+    // (non-"NoXSec") cross section is requested somewhere in fParams. Create
+    // it lazily -- on the first index that actually needs it -- so pure-flux
+    // (no cross section) usage never touches $GENIEXSECPATH at all.
+    XSec* xsec = nullptr;
 
     std::string xsecname = "";
 
@@ -88,6 +93,9 @@ namespace flxrd
         std::string curr = fParams.GetXSecName(fParams.GetCurrentXSec());
 
         if(curr.compare("NoXSec")) { // The comparison returns 0 if the two strings match...
+          if(!xsec) {
+            xsec = new XSec(); // Create XSec object, now that one is actually needed
+          }
           fXSecSplines[xsecname] = xsec->GetXSec(pdg, tar, curr, true); // Create and store the spline
         }
         else {
@@ -99,7 +107,7 @@ namespace flxrd
       }
     }
 
-    delete xsec; // Clean up
+    delete xsec; // Clean up (a no-op if never constructed)
 
     return;
   }
