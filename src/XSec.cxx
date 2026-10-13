@@ -337,7 +337,13 @@ namespace flxrd
 
     if(!override.compare("You_really_should_not_override_if_possible")) { // This is the default
       // This environment variable points to the folder with the most current version of the Genie cross sections
-      xsecFileName = std::getenv("GENIEXSECPATH");
+      const char* geniexsecpath = std::getenv("GENIEXSECPATH");
+      if(!geniexsecpath) { // getenv() returns nullptr if unset; assigning that to a std::string is undefined behavior
+        std::cout << "GENIEXSECPATH is not set -- cannot locate a cross section spline file." << std::endl;
+        std::cout << "A real (non-\"NoXSec\") cross section was requested, so one is required." << std::endl;
+      }
+      assert(geniexsecpath != nullptr);
+      xsecFileName = geniexsecpath;
 
       xsecFileName += "/xsec_graphs*.root"; // General format of the cross section filename
       std::vector<std::string> files = Wildcard(xsecFileName); // Get a list of all files matching the wildcard
